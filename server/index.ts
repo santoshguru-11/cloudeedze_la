@@ -17,6 +17,8 @@ app.use(cors({
       'http://localhost:3000',
       'http://localhost:443',
       'https://localhost:443',
+      'http://34.14.198.14:3000',
+      'https://34.14.198.14:3000',
       'http://34.14.198.14:443',
       'https://34.14.198.14:443',
       'https://localhost:3000',
@@ -34,13 +36,13 @@ app.use(cors({
       return callback(null, true);
     }
 
-    // For development, be more lenient with localhost
-    if (origin && (origin.includes('localhost') || origin.includes('127.0.0.1'))) {
-      console.log('CORS: Allowing localhost origin:', origin);
+    // For development, be more lenient with localhost and server IP
+    if (origin && (origin.includes('localhost') || origin.includes('127.0.0.1') || origin.includes('34.14.198.14'))) {
+      console.log('CORS Request allowed - localhost/server IP:', origin);
       return callback(null, true);
     }
 
-    console.log('CORS: Blocked origin:', origin);
+    console.log('CORS Request blocked for origin:', origin);
     const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
     return callback(new Error(msg), false);
   },
