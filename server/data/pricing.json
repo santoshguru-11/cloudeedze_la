@@ -1,0 +1,120 @@
+{
+  "compute": {
+    "aws": {
+      "general-purpose": { "vcpu": 0.0464, "ram": 0.0051 },
+      "compute-optimized": { "vcpu": 0.0544, "ram": 0.0048 },
+      "memory-optimized": { "vcpu": 0.0432, "ram": 0.0087 },
+      "storage-optimized": { "vcpu": 0.0532, "ram": 0.0053 }
+    },
+    "azure": {
+      "general-purpose": { "vcpu": 0.0418, "ram": 0.0047 },
+      "compute-optimized": { "vcpu": 0.0498, "ram": 0.0044 },
+      "memory-optimized": { "vcpu": 0.0389, "ram": 0.0079 },
+      "storage-optimized": { "vcpu": 0.0487, "ram": 0.0049 }
+    },
+    "gcp": {
+      "general-purpose": { "vcpu": 0.0356, "ram": 0.0039 },
+      "compute-optimized": { "vcpu": 0.0421, "ram": 0.0036 },
+      "memory-optimized": { "vcpu": 0.0334, "ram": 0.0068 },
+      "storage-optimized": { "vcpu": 0.0413, "ram": 0.0042 }
+    },
+    "oracle": {
+      "general-purpose": { "vcpu": 0.0317, "ram": 0.0035 },
+      "compute-optimized": { "vcpu": 0.0378, "ram": 0.0032 },
+      "memory-optimized": { "vcpu": 0.0298, "ram": 0.0061 },
+      "storage-optimized": { "vcpu": 0.0369, "ram": 0.0037 }
+    }
+  },
+  "storage": {
+    "aws": {
+      "ssd-gp3": 0.08,
+      "ssd-io2": 0.125,
+      "hdd-st1": 0.045,
+      "cold-storage": 0.0125
+    },
+    "azure": {
+      "ssd-gp3": 0.076,
+      "ssd-io2": 0.12,
+      "hdd-st1": 0.043,
+      "cold-storage": 0.012
+    },
+    "gcp": {
+      "ssd-gp3": 0.04,
+      "ssd-io2": 0.089,
+      "hdd-st1": 0.033,
+      "cold-storage": 0.01
+    },
+    "oracle": {
+      "ssd-gp3": 0.0425,
+      "ssd-io2": 0.095,
+      "hdd-st1": 0.035,
+      "cold-storage": 0.0105
+    }
+  },
+  "database": {
+    "aws": {
+      "mysql": 2.87,
+      "postgresql": 2.87,
+      "mongodb": 3.45,
+      "redis": 0.432
+    },
+    "azure": {
+      "mysql": 2.45,
+      "postgresql": 2.45,
+      "mongodb": 3.12,
+      "redis": 0.389
+    },
+    "gcp": {
+      "mysql": 1.98,
+      "postgresql": 1.98,
+      "mongodb": 2.78,
+      "redis": 0.334
+    },
+    "oracle": {
+      "mysql": 1.56,
+      "postgresql": 1.56,
+      "mongodb": 2.34,
+      "redis": 0.298
+    }
+  },
+  "networking": {
+    "aws": {
+      "bandwidth": 0.09,
+      "load_balancer": {
+        "none": 0,
+        "application": 22.5,
+        "network": 22.5
+      }
+    },
+    "azure": {
+      "bandwidth": 0.087,
+      "load_balancer": {
+        "none": 0,
+        "application": 18.4,
+        "network": 18.4
+      }
+    },
+    "gcp": {
+      "bandwidth": 0.12,
+      "load_balancer": {
+        "none": 0,
+        "application": 18.0,
+        "network": 18.0
+      }
+    },
+    "oracle": {
+      "bandwidth": 0.0085,
+      "load_balancer": {
+        "none": 0,
+        "application": 15.2,
+        "network": 15.2
+      }
+    }
+  },
+  "regions": {
+    "us-east-1": { "multiplier": 1.0, "name": "US East (N. Virginia)" },
+    "us-west-2": { "multiplier": 1.05, "name": "US West (Oregon)" },
+    "eu-west-1": { "multiplier": 1.12, "name": "Europe (Ireland)" },
+    "ap-southeast-1": { "multiplier": 1.18, "name": "Asia Pacific (Singapore)" }
+  }
+}

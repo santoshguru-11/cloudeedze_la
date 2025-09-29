@@ -1,0 +1,68 @@
+#!/bin/bash
+
+echo "🔧 Fixing Domain DNS and SSL Certificate"
+echo "======================================="
+echo ""
+
+echo "📋 The Issue:"
+echo "   Your domain cloudedze.ai is pointing to different servers:"
+echo "   - 3.33.251.168 (instead of your server 34.14.198.14)"
+echo "   - 15.197.225.128 (instead of your server 34.14.198.14)"
+echo ""
+
+echo "🔍 Diagnostic commands:"
+echo ""
+
+echo "1. Check current DNS resolution:"
+echo "   nslookup cloudedze.ai"
+echo "   nslookup www.cloudedze.ai"
+echo ""
+
+echo "2. Check your server IP:"
+echo "   curl -4 ifconfig.me"
+echo "   # Should show: 34.14.198.14"
+echo ""
+
+echo "🔧 Solutions:"
+echo ""
+
+echo "Option 1: Fix DNS Records (Recommended)"
+echo "======================================"
+echo "Go to your domain registrar (where you bought cloudedze.ai) and:"
+echo "1. Update A record: cloudedze.ai → 34.14.198.14"
+echo "2. Update A record: www.cloudedze.ai → 34.14.198.14"
+echo "3. Wait for DNS propagation (5-30 minutes)"
+echo "4. Then run: sudo certbot --nginx -d cloudedze.ai -d www.cloudedze.ai"
+echo ""
+
+echo "Option 2: Use IP Address for Testing"
+echo "==================================="
+echo "Update Nginx config to work with IP address:"
+echo "   sudo nano /etc/nginx/conf.d/cloudedze.conf"
+echo ""
+echo "Change server_name to:"
+echo "   server_name 34.14.198.14;"
+echo ""
+
+echo "Option 3: Temporary SSL with Self-Signed Certificate"
+echo "==================================================="
+echo "   sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \\"
+echo "     -keyout /etc/nginx/ssl/cloudedze.key \\"
+echo "     -out /etc/nginx/ssl/cloudedze.crt \\"
+echo "     -subj '/C=US/ST=State/L=City/O=Organization/CN=34.14.198.14'"
+echo ""
+
+echo "🎯 Quick Test - Access via IP:"
+echo "   curl -I http://34.14.198.14"
+echo "   # Should show your Cloudedze app"
+echo ""
+
+echo "✅ After fixing DNS, SSL certificate will work!"
+echo ""
+echo "📞 Domain Registrar Steps:"
+echo "1. Login to your domain registrar (GoDaddy, Namecheap, etc.)"
+echo "2. Go to DNS management"
+echo "3. Update A records:"
+echo "   - cloudedze.ai → 34.14.198.14"
+echo "   - www.cloudedze.ai → 34.14.198.14"
+echo "4. Save changes and wait for propagation"

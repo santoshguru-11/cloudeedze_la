@@ -1,0 +1,729 @@
+{
+  "currencies": {
+    "USD": { "symbol": "$", "rate": 1.0 },
+    "INR": { "symbol": "₹", "rate": 83.12 },
+    "EUR": { "symbol": "€", "rate": 0.92 },
+    "KWD": { "symbol": "د.ك", "rate": 0.31 }
+  },
+  "licensing": {
+    "windows": {
+      "server_standard": 972,
+      "server_datacenter": 6155,
+      "per_core": true
+    },
+    "sqlServer": {
+      "express": 0,
+      "standard": 3586,
+      "enterprise": 14256,
+      "per_core": true
+    },
+    "oracle": {
+      "standard": 17500,
+      "enterprise": 47500,
+      "per_core": true,
+      "annual": true
+    },
+    "vmware": {
+      "vsphere_standard": 995,
+      "vsphere_enterprise": 3595,
+      "per_cpu": true,
+      "annual": true
+    },
+    "redhat": {
+      "enterprise_linux": 799,
+      "per_socket": true,
+      "annual": true
+    },
+    "sap": {
+      "hana_enterprise": 73000,
+      "business_suite": 29500,
+      "per_user": false,
+      "annual": true
+    },
+    "microsoftOffice365": {
+      "business_basic": 6,
+      "business_premium": 22,
+      "enterprise_e3": 36,
+      "per_user": true,
+      "monthly": true
+    }
+  },
+  "compute": {
+    "aws": {
+      "general-purpose": { "vcpu": 0.0464, "ram": 0.0051 },
+      "compute-optimized": { "vcpu": 0.0544, "ram": 0.0048 },
+      "memory-optimized": { "vcpu": 0.0432, "ram": 0.0087 },
+      "storage-optimized": { "vcpu": 0.0532, "ram": 0.0053 },
+      "windows_multiplier": 1.6,
+      "lambda_per_request": 0.0000002,
+      "lambda_per_gb_second": 0.0000166667
+    },
+    "azure": {
+      "general-purpose": { "vcpu": 0.0418, "ram": 0.0047 },
+      "compute-optimized": { "vcpu": 0.0498, "ram": 0.0044 },
+      "memory-optimized": { "vcpu": 0.0389, "ram": 0.0079 },
+      "storage-optimized": { "vcpu": 0.0487, "ram": 0.0049 },
+      "windows_multiplier": 1.5,
+      "functions_per_request": 0.0000002,
+      "functions_per_gb_second": 0.000016
+    },
+    "gcp": {
+      "general-purpose": { "vcpu": 0.0356, "ram": 0.0039 },
+      "compute-optimized": { "vcpu": 0.0421, "ram": 0.0036 },
+      "memory-optimized": { "vcpu": 0.0334, "ram": 0.0068 },
+      "storage-optimized": { "vcpu": 0.0413, "ram": 0.0042 },
+      "windows_multiplier": 1.4,
+      "cloud_functions_per_request": 0.0000004,
+      "cloud_functions_per_gb_second": 0.0000025
+    },
+    "oracle": {
+      "general-purpose": { "vcpu": 0.0317, "ram": 0.0035 },
+      "compute-optimized": { "vcpu": 0.0378, "ram": 0.0032 },
+      "memory-optimized": { "vcpu": 0.0298, "ram": 0.0061 },
+      "storage-optimized": { "vcpu": 0.0369, "ram": 0.0037 },
+      "windows_multiplier": 1.3,
+      "functions_per_request": 0.0000002,
+      "functions_per_gb_second": 0.000017
+    }
+  },
+  "storage": {
+    "aws": {
+      "object": {
+        "standard": 0.023,
+        "infrequent-access": 0.0125,
+        "glacier": 0.004,
+        "deep-archive": 0.00099,
+        "requests_per_1k": { "get": 0.0004, "put": 0.005 }
+      },
+      "block": {
+        "ssd-gp3": 0.08,
+        "ssd-io2": 0.125,
+        "hdd-st1": 0.045,
+        "iops": 0.005
+      },
+      "file": {
+        "general-purpose": 0.30,
+        "max-io": 0.30
+      }
+    },
+    "azure": {
+      "object": {
+        "standard": 0.0184,
+        "infrequent-access": 0.01,
+        "glacier": 0.002,
+        "deep-archive": 0.00099,
+        "requests_per_1k": { "get": 0.0004, "put": 0.0055 }
+      },
+      "block": {
+        "ssd-gp3": 0.076,
+        "ssd-io2": 0.12,
+        "hdd-st1": 0.043,
+        "iops": 0.0045
+      },
+      "file": {
+        "general-purpose": 0.28,
+        "max-io": 0.28
+      }
+    },
+    "gcp": {
+      "object": {
+        "standard": 0.02,
+        "infrequent-access": 0.01,
+        "glacier": 0.004,
+        "deep-archive": 0.0012,
+        "requests_per_1k": { "get": 0.0004, "put": 0.005 }
+      },
+      "block": {
+        "ssd-gp3": 0.04,
+        "ssd-io2": 0.089,
+        "hdd-st1": 0.033,
+        "iops": 0.00375
+      },
+      "file": {
+        "general-purpose": 0.20,
+        "max-io": 0.20
+      }
+    },
+    "oracle": {
+      "object": {
+        "standard": 0.0255,
+        "infrequent-access": 0.01,
+        "glacier": 0.0025,
+        "deep-archive": 0.001,
+        "requests_per_1k": { "get": 0.0004, "put": 0.005 }
+      },
+      "block": {
+        "ssd-gp3": 0.0425,
+        "ssd-io2": 0.095,
+        "hdd-st1": 0.035,
+        "iops": 0.004
+      },
+      "file": {
+        "general-purpose": 0.17,
+        "max-io": 0.17
+      }
+    }
+  },
+  "database": {
+    "aws": {
+      "relational": {
+        "mysql": { "micro": 15.33, "small": 28.67, "medium": 57.33, "large": 114.67, "xlarge": 229.33 },
+        "postgresql": { "micro": 15.33, "small": 28.67, "medium": 57.33, "large": 114.67, "xlarge": 229.33 },
+        "oracle": { "micro": 25.00, "small": 50.00, "medium": 100.00, "large": 200.00, "xlarge": 400.00 },
+        "sql-server": { "micro": 35.00, "small": 70.00, "medium": 140.00, "large": 280.00, "xlarge": 560.00 },
+        "mariadb": { "micro": 15.33, "small": 28.67, "medium": 57.33, "large": 114.67, "xlarge": 229.33 },
+        "storage_per_gb": 0.115,
+        "backup_per_gb": 0.095,
+        "multi_az_multiplier": 2.0
+      },
+      "nosql": {
+        "dynamodb": { "read_capacity_unit": 0.25, "write_capacity_unit": 1.25, "storage_per_gb": 0.25 },
+        "mongodb": { "small": 57, "medium": 114, "large": 228, "xlarge": 456 },
+        "cassandra": { "small": 70, "medium": 140, "large": 280, "xlarge": 560 }
+      },
+      "cache": {
+        "redis": { "micro": 15.17, "small": 45.36, "medium": 90.72, "large": 181.44 },
+        "memcached": { "micro": 12.78, "small": 38.23, "medium": 76.46, "large": 152.92 }
+      },
+      "warehouse": {
+        "small": 180, "medium": 360, "large": 1440, "xlarge": 2880,
+        "storage_per_gb": 0.024
+      }
+    },
+    "azure": {
+      "relational": {
+        "mysql": { "micro": 13.87, "small": 25.92, "medium": 51.84, "large": 103.68, "xlarge": 207.36 },
+        "postgresql": { "micro": 13.87, "small": 25.92, "medium": 51.84, "large": 103.68, "xlarge": 207.36 },
+        "oracle": { "micro": 22.50, "small": 45.00, "medium": 90.00, "large": 180.00, "xlarge": 360.00 },
+        "sql-server": { "micro": 31.50, "small": 63.00, "medium": 126.00, "large": 252.00, "xlarge": 504.00 },
+        "mariadb": { "micro": 13.87, "small": 25.92, "medium": 51.84, "large": 103.68, "xlarge": 207.36 },
+        "storage_per_gb": 0.10,
+        "backup_per_gb": 0.085,
+        "multi_az_multiplier": 1.9
+      },
+      "nosql": {
+        "dynamodb": { "read_capacity_unit": 0.22, "write_capacity_unit": 1.12, "storage_per_gb": 0.22 },
+        "mongodb": { "small": 51.3, "medium": 102.6, "large": 205.2, "xlarge": 410.4 },
+        "cassandra": { "small": 63, "medium": 126, "large": 252, "xlarge": 504 }
+      },
+      "cache": {
+        "redis": { "micro": 13.65, "small": 40.82, "medium": 81.65, "large": 163.30 },
+        "memcached": { "micro": 11.50, "small": 34.41, "medium": 68.81, "large": 137.63 }
+      },
+      "warehouse": {
+        "small": 162, "medium": 324, "large": 1296, "xlarge": 2592,
+        "storage_per_gb": 0.022
+      }
+    },
+    "gcp": {
+      "relational": {
+        "mysql": { "micro": 9.37, "small": 17.52, "medium": 35.04, "large": 70.08, "xlarge": 140.16 },
+        "postgresql": { "micro": 9.37, "small": 17.52, "medium": 35.04, "large": 70.08, "xlarge": 140.16 },
+        "oracle": { "micro": 15.00, "small": 30.00, "medium": 60.00, "large": 120.00, "xlarge": 240.00 },
+        "sql-server": { "micro": 21.00, "small": 42.00, "medium": 84.00, "large": 168.00, "xlarge": 336.00 },
+        "mariadb": { "micro": 9.37, "small": 17.52, "medium": 35.04, "large": 70.08, "xlarge": 140.16 },
+        "storage_per_gb": 0.17,
+        "backup_per_gb": 0.08,
+        "multi_az_multiplier": 1.8
+      },
+      "nosql": {
+        "dynamodb": { "read_capacity_unit": 0.37, "write_capacity_unit": 1.85, "storage_per_gb": 0.18 },
+        "mongodb": { "small": 39, "medium": 78, "large": 156, "xlarge": 312 },
+        "cassandra": { "small": 48, "medium": 96, "large": 192, "xlarge": 384 }
+      },
+      "cache": {
+        "redis": { "micro": 10.37, "small": 31.03, "medium": 62.05, "large": 124.10 },
+        "memcached": { "micro": 8.75, "small": 26.17, "medium": 52.34, "large": 104.68 }
+      },
+      "warehouse": {
+        "small": 150, "medium": 300, "large": 1200, "xlarge": 2400,
+        "storage_per_gb": 0.02
+      }
+    },
+    "oracle": {
+      "relational": {
+        "mysql": { "micro": 7.73, "small": 14.45, "medium": 28.90, "large": 57.80, "xlarge": 115.60 },
+        "postgresql": { "micro": 7.73, "small": 14.45, "medium": 28.90, "large": 57.80, "xlarge": 115.60 },
+        "oracle": { "micro": 12.50, "small": 25.00, "medium": 50.00, "large": 100.00, "xlarge": 200.00 },
+        "sql-server": { "micro": 17.50, "small": 35.00, "medium": 70.00, "large": 140.00, "xlarge": 280.00 },
+        "mariadb": { "micro": 7.73, "small": 14.45, "medium": 28.90, "large": 57.80, "xlarge": 115.60 },
+        "storage_per_gb": 0.0255,
+        "backup_per_gb": 0.051,
+        "multi_az_multiplier": 1.7
+      },
+      "nosql": {
+        "dynamodb": { "read_capacity_unit": 0.15, "write_capacity_unit": 0.75, "storage_per_gb": 0.15 },
+        "mongodb": { "small": 32.1, "medium": 64.2, "large": 128.4, "xlarge": 256.8 },
+        "cassandra": { "small": 39.6, "medium": 79.2, "large": 158.4, "xlarge": 316.8 }
+      },
+      "cache": {
+        "redis": { "micro": 8.55, "small": 25.59, "medium": 51.17, "large": 102.34 },
+        "memcached": { "micro": 7.22, "small": 21.59, "medium": 43.17, "large": 86.34 }
+      },
+      "warehouse": {
+        "small": 123.75, "medium": 247.50, "large": 990, "xlarge": 1980,
+        "storage_per_gb": 0.015
+      }
+    }
+  },
+  "networking": {
+    "aws": {
+      "bandwidth": 0.09,
+      "load_balancer": { "none": 0, "application": 22.5, "network": 22.5 },
+      "cdn": { "requests_per_10k": 0.0075, "data_transfer_per_gb": 0.085 },
+      "dns": { "hosted_zone": 0.50, "queries_per_million": 0.40 },
+      "vpn": { "connection_hour": 0.05 }
+    },
+    "azure": {
+      "bandwidth": 0.087,
+      "load_balancer": { "none": 0, "application": 18.4, "network": 18.4 },
+      "cdn": { "requests_per_10k": 0.0081, "data_transfer_per_gb": 0.081 },
+      "dns": { "hosted_zone": 0.54, "queries_per_million": 0.54 },
+      "vpn": { "connection_hour": 0.048 }
+    },
+    "gcp": {
+      "bandwidth": 0.12,
+      "load_balancer": { "none": 0, "application": 18.0, "network": 18.0 },
+      "cdn": { "requests_per_10k": 0.0075, "data_transfer_per_gb": 0.08 },
+      "dns": { "hosted_zone": 0.20, "queries_per_million": 0.20 },
+      "vpn": { "connection_hour": 0.05 }
+    },
+    "oracle": {
+      "bandwidth": 0.0085,
+      "load_balancer": { "none": 0, "application": 15.2, "network": 15.2 },
+      "cdn": { "requests_per_10k": 0.0050, "data_transfer_per_gb": 0.0425 },
+      "dns": { "hosted_zone": 0.40, "queries_per_million": 0.85 },
+      "vpn": { "connection_hour": 0.042 }
+    }
+  },
+  "analytics": {
+    "aws": {
+      "data_processing": { "small": 0.10, "medium": 0.20, "large": 0.40, "xlarge": 0.80 },
+      "streaming": { "shard_hour": 0.015, "record_per_million": 0.014 },
+      "business_intelligence": { "user_per_month": 18, "query_per_1k": 0.50 }
+    },
+    "azure": {
+      "data_processing": { "small": 0.093, "medium": 0.186, "large": 0.372, "xlarge": 0.744 },
+      "streaming": { "shard_hour": 0.014, "record_per_million": 0.013 },
+      "business_intelligence": { "user_per_month": 16.2, "query_per_1k": 0.45 }
+    },
+    "gcp": {
+      "data_processing": { "small": 0.076, "medium": 0.152, "large": 0.304, "xlarge": 0.608 },
+      "streaming": { "shard_hour": 0.036, "record_per_million": 0.05 },
+      "business_intelligence": { "user_per_month": 12, "query_per_1k": 0.30 }
+    },
+    "oracle": {
+      "data_processing": { "small": 0.068, "medium": 0.136, "large": 0.272, "xlarge": 0.544 },
+      "streaming": { "shard_hour": 0.0125, "record_per_million": 0.011 },
+      "business_intelligence": { "user_per_month": 10.8, "query_per_1k": 0.25 }
+    }
+  },
+  "ai": {
+    "aws": {
+      "training": { "cpu": 0.048, "gpu-small": 0.526, "gpu-large": 3.06 },
+      "inference": { "cpu": 0.0048, "gpu-small": 0.0526, "gpu-large": 0.306 },
+      "prebuilt": {
+        "image_analysis_per_1k": 1.50,
+        "text_processing_per_million_chars": 0.0005,
+        "speech_per_1k_requests": 4.00
+      }
+    },
+    "azure": {
+      "training": { "cpu": 0.044, "gpu-small": 0.484, "gpu-large": 2.82 },
+      "inference": { "cpu": 0.0044, "gpu-small": 0.0484, "gpu-large": 0.282 },
+      "prebuilt": {
+        "image_analysis_per_1k": 1.35,
+        "text_processing_per_million_chars": 0.00045,
+        "speech_per_1k_requests": 3.60
+      }
+    },
+    "gcp": {
+      "training": { "cpu": 0.036, "gpu-small": 0.395, "gpu-large": 2.30 },
+      "inference": { "cpu": 0.0036, "gpu-small": 0.0395, "gpu-large": 0.230 },
+      "prebuilt": {
+        "image_analysis_per_1k": 1.10,
+        "text_processing_per_million_chars": 0.0004,
+        "speech_per_1k_requests": 2.40
+      }
+    },
+    "oracle": {
+      "training": { "cpu": 0.032, "gpu-small": 0.354, "gpu-large": 2.06 },
+      "inference": { "cpu": 0.0032, "gpu-small": 0.0354, "gpu-large": 0.206 },
+      "prebuilt": {
+        "image_analysis_per_1k": 0.99,
+        "text_processing_per_million_chars": 0.00036,
+        "speech_per_1k_requests": 2.16
+      }
+    }
+  },
+  "security": {
+    "aws": {
+      "web_firewall_per_million": 1.00,
+      "identity_per_user": 0.50,
+      "identity_per_auth": 0.0055,
+      "key_per_key": 1.00,
+      "key_per_10k_operations": 0.03,
+      "threat_detection": 3.00,
+      "threat_per_million_events": 1.00
+    },
+    "azure": {
+      "web_firewall_per_million": 0.90,
+      "identity_per_user": 0.45,
+      "identity_per_auth": 0.005,
+      "key_per_key": 0.90,
+      "key_per_10k_operations": 0.027,
+      "threat_detection": 2.70,
+      "threat_per_million_events": 0.90
+    },
+    "gcp": {
+      "web_firewall_per_million": 0.75,
+      "identity_per_user": 0.36,
+      "identity_per_auth": 0.004,
+      "key_per_key": 0.06,
+      "key_per_10k_operations": 0.03,
+      "threat_detection": 2.40,
+      "threat_per_million_events": 0.80
+    },
+    "oracle": {
+      "web_firewall_per_million": 0.68,
+      "identity_per_user": 0.32,
+      "identity_per_auth": 0.0036,
+      "key_per_key": 0.054,
+      "key_per_10k_operations": 0.025,
+      "threat_detection": 2.16,
+      "threat_per_million_events": 0.72
+    }
+  },
+  "monitoring": {
+    "aws": {
+      "custom_metric": 0.30,
+      "log_ingestion_per_gb": 0.50,
+      "traces_per_million": 2.00,
+      "alert_per_notification": 0.10
+    },
+    "azure": {
+      "custom_metric": 0.27,
+      "log_ingestion_per_gb": 0.45,
+      "traces_per_million": 1.80,
+      "alert_per_notification": 0.09
+    },
+    "gcp": {
+      "custom_metric": 0.259,
+      "log_ingestion_per_gb": 0.50,
+      "traces_per_million": 2.00,
+      "alert_per_notification": 0.05
+    },
+    "oracle": {
+      "custom_metric": 0.23,
+      "log_ingestion_per_gb": 0.41,
+      "traces_per_million": 1.62,
+      "alert_per_notification": 0.045
+    }
+  },
+  "devops": {
+    "aws": {
+      "build_per_minute": 0.005,
+      "parallel_job": 1.00,
+      "container_registry_per_gb": 0.10,
+      "container_pulls_per_1k": 0.09,
+      "api_requests_per_million": 3.50,
+      "api_endpoint": 3.50
+    },
+    "azure": {
+      "build_per_minute": 0.0045,
+      "parallel_job": 0.90,
+      "container_registry_per_gb": 0.09,
+      "container_pulls_per_1k": 0.081,
+      "api_requests_per_million": 3.15,
+      "api_endpoint": 3.15
+    },
+    "gcp": {
+      "build_per_minute": 0.003,
+      "parallel_job": 0.60,
+      "container_registry_per_gb": 0.05,
+      "container_pulls_per_1k": 0.05,
+      "api_requests_per_million": 2.50,
+      "api_endpoint": 2.50
+    },
+    "oracle": {
+      "build_per_minute": 0.0027,
+      "parallel_job": 0.54,
+      "container_registry_per_gb": 0.045,
+      "container_pulls_per_1k": 0.045,
+      "api_requests_per_million": 2.25,
+      "api_endpoint": 2.25
+    }
+  },
+  "backup": {
+    "aws": {
+      "storage_per_gb": 0.05,
+      "frequency_multiplier": { "daily": 1.0, "weekly": 0.7, "monthly": 0.5 }
+    },
+    "azure": {
+      "storage_per_gb": 0.045,
+      "frequency_multiplier": { "daily": 1.0, "weekly": 0.7, "monthly": 0.5 }
+    },
+    "gcp": {
+      "storage_per_gb": 0.026,
+      "frequency_multiplier": { "daily": 1.0, "weekly": 0.7, "monthly": 0.5 }
+    },
+    "oracle": {
+      "storage_per_gb": 0.0234,
+      "frequency_multiplier": { "daily": 1.0, "weekly": 0.7, "monthly": 0.5 }
+    }
+  },
+  "iot": {
+    "aws": {
+      "device_per_month": 0.08,
+      "message_per_million": 1.00,
+      "data_processing_per_gb": 0.42,
+      "edge_location": 0.50
+    },
+    "azure": {
+      "device_per_month": 0.072,
+      "message_per_million": 0.90,
+      "data_processing_per_gb": 0.378,
+      "edge_location": 0.45
+    },
+    "gcp": {
+      "device_per_month": 0.045,
+      "message_per_million": 0.50,
+      "data_processing_per_gb": 0.30,
+      "edge_location": 0.40
+    },
+    "oracle": {
+      "device_per_month": 0.041,
+      "message_per_million": 0.45,
+      "data_processing_per_gb": 0.27,
+      "edge_location": 0.36
+    }
+  },
+  "media": {
+    "aws": {
+      "streaming_per_hour": { "720p": 0.019, "1080p": 0.038, "4k": 0.119 },
+      "transcoding_per_minute": { "standard": 0.0075, "hd": 0.017, "4k": 0.068 }
+    },
+    "azure": {
+      "streaming_per_hour": { "720p": 0.0171, "1080p": 0.0342, "4k": 0.1071 },
+      "transcoding_per_minute": { "standard": 0.00675, "hd": 0.0153, "4k": 0.0612 }
+    },
+    "gcp": {
+      "streaming_per_hour": { "720p": 0.01425, "1080p": 0.0285, "4k": 0.08925 },
+      "transcoding_per_minute": { "standard": 0.005625, "hd": 0.01275, "4k": 0.051 }
+    },
+    "oracle": {
+      "streaming_per_hour": { "720p": 0.01283, "1080p": 0.02565, "4k": 0.08033 },
+      "transcoding_per_minute": { "standard": 0.005063, "hd": 0.01148, "4k": 0.04590 }
+    }
+  },
+  "quantum": {
+    "aws": {
+      "qpu_hour": 25.00,
+      "algorithm_complexity": { "basic": 1.0, "intermediate": 1.5, "advanced": 2.5 },
+      "circuit_optimization": 0.10
+    },
+    "azure": {
+      "qpu_hour": 23.50,
+      "algorithm_complexity": { "basic": 1.0, "intermediate": 1.4, "advanced": 2.3 },
+      "circuit_optimization": 0.095
+    },
+    "gcp": {
+      "qpu_hour": 22.00,
+      "algorithm_complexity": { "basic": 1.0, "intermediate": 1.3, "advanced": 2.0 },
+      "circuit_optimization": 0.08
+    },
+    "oracle": {
+      "qpu_hour": 20.50,
+      "algorithm_complexity": { "basic": 1.0, "intermediate": 1.2, "advanced": 1.8 },
+      "circuit_optimization": 0.075
+    }
+  },
+  "advancedAI": {
+    "aws": {
+      "vector_db_per_million_dims": 2.50,
+      "vector_queries_per_million": 0.75,
+      "tpu_per_hour": 8.00,
+      "inference_chips_per_hour": 12.00,
+      "model_hosting_per_model": 15.00,
+      "inference_per_million_requests": 2.00,
+      "document_processing_per_1k": 0.15,
+      "embeddings_per_million": 0.40
+    },
+    "azure": {
+      "vector_db_per_million_dims": 2.25,
+      "vector_queries_per_million": 0.68,
+      "tpu_per_hour": 7.20,
+      "inference_chips_per_hour": 10.80,
+      "model_hosting_per_model": 13.50,
+      "inference_per_million_requests": 1.80,
+      "document_processing_per_1k": 0.135,
+      "embeddings_per_million": 0.36
+    },
+    "gcp": {
+      "vector_db_per_million_dims": 1.75,
+      "vector_queries_per_million": 0.52,
+      "tpu_per_hour": 5.50,
+      "inference_chips_per_hour": 8.25,
+      "model_hosting_per_model": 10.50,
+      "inference_per_million_requests": 1.40,
+      "document_processing_per_1k": 0.105,
+      "embeddings_per_million": 0.28
+    },
+    "oracle": {
+      "vector_db_per_million_dims": 1.58,
+      "vector_queries_per_million": 0.47,
+      "tpu_per_hour": 4.95,
+      "inference_chips_per_hour": 7.43,
+      "model_hosting_per_model": 9.45,
+      "inference_per_million_requests": 1.26,
+      "document_processing_per_1k": 0.095,
+      "embeddings_per_million": 0.25
+    }
+  },
+  "edge": {
+    "aws": {
+      "edge_location": 50.00,
+      "edge_compute_per_hour": 0.15,
+      "5g_network_slice": 500.00,
+      "private_5g_network": 2500.00,
+      "realtime_events_per_million": 1.20
+    },
+    "azure": {
+      "edge_location": 45.00,
+      "edge_compute_per_hour": 0.135,
+      "5g_network_slice": 450.00,
+      "private_5g_network": 2250.00,
+      "realtime_events_per_million": 1.08
+    },
+    "gcp": {
+      "edge_location": 38.00,
+      "edge_compute_per_hour": 0.114,
+      "5g_network_slice": 380.00,
+      "private_5g_network": 1900.00,
+      "realtime_events_per_million": 0.91
+    },
+    "oracle": {
+      "edge_location": 34.20,
+      "edge_compute_per_hour": 0.103,
+      "5g_network_slice": 342.00,
+      "private_5g_network": 1710.00,
+      "realtime_events_per_million": 0.82
+    }
+  },
+  "confidential": {
+    "aws": {
+      "secure_enclave_per_hour": 0.25,
+      "trusted_execution_per_hour": 0.18,
+      "privacy_operations_per_million": 3.50,
+      "zero_trust_per_gb": 0.085
+    },
+    "azure": {
+      "secure_enclave_per_hour": 0.225,
+      "trusted_execution_per_hour": 0.162,
+      "privacy_operations_per_million": 3.15,
+      "zero_trust_per_gb": 0.077
+    },
+    "gcp": {
+      "secure_enclave_per_hour": 0.19,
+      "trusted_execution_per_hour": 0.137,
+      "privacy_operations_per_million": 2.66,
+      "zero_trust_per_gb": 0.065
+    },
+    "oracle": {
+      "secure_enclave_per_hour": 0.171,
+      "trusted_execution_per_hour": 0.123,
+      "privacy_operations_per_million": 2.39,
+      "zero_trust_per_gb": 0.058
+    }
+  },
+  "sustainability": {
+    "aws": {
+      "carbon_tracking": 5.00,
+      "renewable_energy_premium": 1.08,
+      "green_optimization": 0.95,
+      "carbon_offset_per_ton": 15.00,
+      "co2_per_kwh": 0.000233,
+      "renewable_percent": 86
+    },
+    "azure": {
+      "carbon_tracking": 4.50,
+      "renewable_energy_premium": 1.05,
+      "green_optimization": 0.92,
+      "carbon_offset_per_ton": 13.50,
+      "co2_per_kwh": 0.000198,
+      "renewable_percent": 93
+    },
+    "gcp": {
+      "carbon_tracking": 0.00,
+      "renewable_energy_premium": 1.00,
+      "green_optimization": 0.88,
+      "carbon_offset_per_ton": 12.00,
+      "co2_per_kwh": 0.000000,
+      "renewable_percent": 100
+    },
+    "oracle": {
+      "carbon_tracking": 4.05,
+      "renewable_energy_premium": 1.03,
+      "green_optimization": 0.89,
+      "carbon_offset_per_ton": 10.80,
+      "co2_per_kwh": 0.000179,
+      "renewable_percent": 95
+    }
+  },
+  "scenarios": {
+    "aws": {
+      "disaster_recovery_base": 100.00,
+      "dr_rto_multiplier": { "1": 3.0, "4": 2.5, "24": 2.0, "72": 1.5, "168": 1.0 },
+      "dr_rpo_multiplier": { "15": 2.5, "60": 2.0, "240": 1.5, "720": 1.2, "1440": 1.0 },
+      "compliance_premiums": { "gdpr": 0.15, "hipaa": 0.25, "sox": 0.20, "pci": 0.18, "iso27001": 0.12 },
+      "audit_logging_per_gb": 0.75,
+      "data_residency_premium": { "us": 1.0, "eu": 1.15, "asia": 1.12, "global": 1.0 },
+      "migration_base_cost": 2500.00,
+      "migration_per_tb": 150.00,
+      "complexity_multiplier": { "simple": 1.0, "moderate": 1.8, "complex": 3.2 }
+    },
+    "azure": {
+      "disaster_recovery_base": 90.00,
+      "dr_rto_multiplier": { "1": 2.8, "4": 2.3, "24": 1.8, "72": 1.4, "168": 0.9 },
+      "dr_rpo_multiplier": { "15": 2.3, "60": 1.8, "240": 1.4, "720": 1.1, "1440": 0.9 },
+      "compliance_premiums": { "gdpr": 0.135, "hipaa": 0.225, "sox": 0.18, "pci": 0.162, "iso27001": 0.108 },
+      "audit_logging_per_gb": 0.675,
+      "data_residency_premium": { "us": 1.0, "eu": 1.10, "asia": 1.08, "global": 1.0 },
+      "migration_base_cost": 2250.00,
+      "migration_per_tb": 135.00,
+      "complexity_multiplier": { "simple": 0.9, "moderate": 1.6, "complex": 2.9 }
+    },
+    "gcp": {
+      "disaster_recovery_base": 75.00,
+      "dr_rto_multiplier": { "1": 2.3, "4": 1.9, "24": 1.5, "72": 1.2, "168": 0.8 },
+      "dr_rpo_multiplier": { "15": 1.9, "60": 1.5, "240": 1.2, "720": 1.0, "1440": 0.8 },
+      "compliance_premiums": { "gdpr": 0.11, "hipaa": 0.19, "sox": 0.15, "pci": 0.135, "iso27001": 0.09 },
+      "audit_logging_per_gb": 0.57,
+      "data_residency_premium": { "us": 1.0, "eu": 1.08, "asia": 1.05, "global": 1.0 },
+      "migration_base_cost": 1875.00,
+      "migration_per_tb": 112.50,
+      "complexity_multiplier": { "simple": 0.75, "moderate": 1.35, "complex": 2.4 }
+    },
+    "oracle": {
+      "disaster_recovery_base": 67.50,
+      "dr_rto_multiplier": { "1": 2.1, "4": 1.7, "24": 1.4, "72": 1.1, "168": 0.7 },
+      "dr_rpo_multiplier": { "15": 1.7, "60": 1.4, "240": 1.1, "720": 0.9, "1440": 0.7 },
+      "compliance_premiums": { "gdpr": 0.099, "hipaa": 0.171, "sox": 0.135, "pci": 0.122, "iso27001": 0.081 },
+      "audit_logging_per_gb": 0.513,
+      "data_residency_premium": { "us": 1.0, "eu": 1.05, "asia": 1.03, "global": 1.0 },
+      "migration_base_cost": 1687.50,
+      "migration_per_tb": 101.25,
+      "complexity_multiplier": { "simple": 0.68, "moderate": 1.22, "complex": 2.16 }
+    }
+  },
+  "regions": {
+    "us-east-1": { "multiplier": 1.0, "name": "US East (N. Virginia)" },
+    "us-west-2": { "multiplier": 1.05, "name": "US West (Oregon)" },
+    "eu-west-1": { "multiplier": 1.12, "name": "Europe (Ireland)" },
+    "ap-southeast-1": { "multiplier": 1.18, "name": "Asia Pacific (Singapore)" },
+    "ap-northeast-1": { "multiplier": 1.15, "name": "Asia Pacific (Tokyo)" },
+    "ca-central-1": { "multiplier": 1.08, "name": "Canada (Central)" },
+    "eu-central-1": { "multiplier": 1.14, "name": "Europe (Frankfurt)" },
+    "ap-south-1": { "multiplier": 1.06, "name": "Asia Pacific (Mumbai)" }
+  }
+}

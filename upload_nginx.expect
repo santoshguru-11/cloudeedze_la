@@ -1,0 +1,61 @@
+#!/usr/bin/expect -f
+
+set timeout 30
+set password "Padmaravi@123"
+
+# Upload nginx config file
+spawn scp -o StrictHostKeyChecking=no nginx-config.conf santosh@34.14.198.14:/etc/nginx/sites-available/cloudedze
+
+expect {
+    "password:" {
+        send "$password\r"
+        exp_continue
+    }
+    "Permission denied" {
+        puts "Permission denied. Trying with sudo..."
+        exit 1
+    }
+    eof
+}
+
+# Now run commands to enable and restart nginx
+spawn ssh -o StrictHostKeyChecking=no santosh@34.14.198.14
+
+expect "password:"
+send "$password\r"
+
+expect "$ "
+
+# Enable the site
+send "sudo ln -sf /etc/nginx/sites-available/cloudedze /etc/nginx/sites-enabled/\r"
+expect "password:"
+send "$password\r"
+expect "$ "
+
+# Test nginx configuration
+send "sudo nginx -t\r"
+expect "password:"
+send "$password\r"
+expect "$ "
+
+# Restart nginx
+send "sudo systemctl restart nginx\r"
+expect "password:"
+send "$password\r"
+expect "$ "
+
+# Check nginx status
+send "sudo systemctl status nginx\r"
+expect "password:"
+send "$password\r"
+expect "$ "
+
+# Test the application
+send "curl -f http://localhost:3000/health\r"
+expect "$ "
+
+send "curl -f https://app.cloudedze.ai/health\r"
+expect "$ "
+
+send "exit\r"
+expect eof

@@ -1,0 +1,75 @@
+#!/bin/bash
+
+echo "🔧 Oracle Linux SSL Setup for cloudedze.ai"
+echo "==========================================="
+echo ""
+
+echo "📋 Commands for Oracle Linux:"
+echo ""
+
+echo "1. Install Certbot on Oracle Linux:"
+echo "   sudo yum install -y python3-pip"
+echo "   sudo pip3 install certbot"
+echo "   sudo pip3 install certbot-nginx"
+echo ""
+
+echo "2. Alternative method - Install from EPEL:"
+echo "   sudo yum install -y python3-certbot python3-certbot-nginx"
+echo ""
+
+echo "3. Start and enable Nginx:"
+echo "   sudo systemctl start nginx"
+echo "   sudo systemctl enable nginx"
+echo ""
+
+echo "4. Create Nginx configuration:"
+echo "   sudo nano /etc/nginx/conf.d/cloudedze.conf"
+echo ""
+
+echo "5. Add this configuration:"
+echo "   server {"
+echo "       listen 80;"
+echo "       server_name cloudedze.ai www.cloudedze.ai;"
+echo "       "
+echo "       location / {"
+echo "           proxy_pass http://localhost:3000;"
+echo "           proxy_http_version 1.1;"
+echo "           proxy_set_header Upgrade \$http_upgrade;"
+echo "           proxy_set_header Connection 'upgrade';"
+echo "           proxy_set_header Host \$host;"
+echo "           proxy_set_header X-Real-IP \$remote_addr;"
+echo "           proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;"
+echo "           proxy_set_header X-Forwarded-Proto \$scheme;"
+echo "           proxy_cache_bypass \$http_upgrade;"
+echo "           proxy_read_timeout 86400;"
+echo "       }"
+echo "   }"
+echo ""
+
+echo "6. Test and reload Nginx:"
+echo "   sudo nginx -t"
+echo "   sudo systemctl reload nginx"
+echo ""
+
+echo "7. Configure firewall:"
+echo "   sudo firewall-cmd --permanent --add-service=http"
+echo "   sudo firewall-cmd --permanent --add-service=https"
+echo "   sudo firewall-cmd --reload"
+echo ""
+
+echo "8. Get SSL certificate:"
+echo "   sudo certbot --nginx -d cloudedze.ai -d www.cloudedze.ai --non-interactive --agree-tos --email admin@cloudedze.ai"
+echo ""
+
+echo "9. Test the setup:"
+echo "   curl -I http://cloudedze.ai"
+echo "   curl -I https://cloudedze.ai"
+echo ""
+
+echo "🎯 Oracle Linux specific notes:"
+echo "   - Use pip3 to install certbot"
+echo "   - Or use python3-certbot packages"
+echo "   - Nginx configuration is the same"
+echo ""
+
+echo "✅ This will work on Oracle Linux!"
