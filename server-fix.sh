@@ -56,7 +56,10 @@ FEATURE_COST_ANALYSIS=true
 EOF
 
 echo "5. 🚀 Starting application with production environment..."
-export $(cat .env.production | xargs)
+# Load environment variables properly
+set -a
+source .env.production
+set +a
 pm2 start dist/index.js --name cloudedze
 
 echo "6. 💾 Saving PM2 configuration..."
