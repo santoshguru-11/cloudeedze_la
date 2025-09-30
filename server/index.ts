@@ -15,13 +15,9 @@ app.use(cors({
   origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
     const allowedOrigins = [
       'http://localhost:3000',
-      'http://localhost:443',
-      'https://localhost:443',
+      'https://localhost:3000',
       'http://34.14.198.14:3000',
       'https://34.14.198.14:3000',
-      'http://34.14.198.14:443',
-      'https://34.14.198.14:443',
-      'https://localhost:3000',
       'https://cloudedze.ai',
       'https://app.cloudedze.ai',
       'https://app.cloudedze.com'
