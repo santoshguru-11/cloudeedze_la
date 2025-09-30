@@ -19,8 +19,11 @@ app.use(cors({
       'http://34.14.198.14:3000',
       'https://34.14.198.14:3000',
       'https://cloudedze.ai',
+      'http://cloudedze.ai',
       'https://app.cloudedze.ai',
-      'https://app.cloudedze.com'
+      'http://app.cloudedze.ai',
+      'https://app.cloudedze.com',
+      'http://app.cloudedze.com'
     ];
 
     console.log('CORS Request - Origin:', origin);
