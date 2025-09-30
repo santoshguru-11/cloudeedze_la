@@ -224,10 +224,91 @@ pm2 show cloudedze
 
 ## Troubleshooting
 
-1. **Application won't start**: Check logs with `pm2 logs cloudedze`
-2. **Port already in use**: Check what's using the port with `sudo netstat -tlnp | grep :3000`
-3. **Database connection issues**: Verify DATABASE_URL in .env file
-4. **Permission errors**: Check file permissions with `ls -la`
+### Common Issues and Solutions
+
+1. **500 Internal Server Error: "secret option required for sessions"**
+   ```bash
+   # This means SESSION_SECRET is not set in environment
+   # Run the server-fix.sh script to resolve:
+   cd ~/cloudeedze_la
+   bash server-fix.sh
+   ```
+
+2. **Application won't start**:
+   ```bash
+   # Check logs for specific errors
+   pm2 logs cloudedze --lines 20
+
+   # Check if environment variables are loaded
+   pm2 show cloudedze
+   ```
+
+3. **Port already in use**:
+   ```bash
+   # Check what's using the port
+   sudo netstat -tlnp | grep :3000
+   # or
+   lsof -i :3000
+
+   # Kill processes if needed
+   sudo pkill -f "node.*3000"
+   ```
+
+4. **Database connection issues**:
+   ```bash
+   # Verify DATABASE_URL in .env file
+   cat .env.production | grep DATABASE_URL
+
+   # Test database connection
+   psql -h localhost -U cloudedze_user -d cloudedze
+   ```
+
+5. **CORS errors in browser**:
+   ```bash
+   # Check if server IP is in CORS_ORIGINS
+   cat .env.production | grep CORS_ORIGINS
+
+   # Should include: http://34.14.198.14:3000
+   ```
+
+6. **Permission errors**:
+   ```bash
+   # Check file permissions
+   ls -la
+
+   # Fix permissions if needed
+   chmod -R 755 ~/cloudeedze_la
+   ```
+
+### Quick Diagnostic Commands
+
+```bash
+# Check server status
+pm2 status
+
+# View recent logs
+pm2 logs cloudedze --lines 10
+
+# Test connectivity
+curl -I http://localhost:3000
+curl -I http://34.14.198.14:3000
+
+# Check environment variables
+pm2 show cloudedze | grep -A 10 "env:"
+
+# Check what's listening on port 3000
+lsof -i :3000
+```
+
+### Emergency Reset
+
+If everything is broken, run this emergency reset:
+```bash
+cd ~/cloudeedze_la
+pm2 stop all && pm2 delete all
+git pull origin main
+bash server-fix.sh
+```
 
 ## Access Your Application
 
