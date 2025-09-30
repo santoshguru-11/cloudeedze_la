@@ -73,7 +73,10 @@ oci_api_key.pem
 credentials
 config.json
 
-# Any file with 'secret' or 'cred' in name
+# Any file with 'secret' or 'cred' in name (but not React components)
 *secret*
 *cred*
 *credential*
+!client/src/pages/cloud-credentials.tsx
+!**/*credentials*.tsx
+!**/*credentials*.ts
