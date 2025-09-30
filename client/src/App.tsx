@@ -11,7 +11,7 @@ import Landing from '@/pages/landing';
 import Calculator from '@/pages/calculator';
 import Results from '@/pages/results';
 import { InventoryPage } from '@/pages/inventory';
-import CloudCredentialsPage from '@/pages/cloud-credentials';
+import CloudCredentialsPage from '@/pages/cloud-credentials.tsx';
 import TerraformUploadPage from '@/pages/terraform-upload';
 import ExcelToIaC from '@/pages/excel-to-iac';
 import NotFound from '@/pages/not-found';
