@@ -103,7 +103,7 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  const distPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "dist", "public");
+  const distPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "dist");
 
   if (!fs.existsSync(distPath)) {
     throw new Error(
@@ -111,9 +111,19 @@ export function serveStatic(app: Express) {
     );
   }
 
-  // Serve static files first
-  app.use(express.static(distPath));
-  
+  // Serve static files with proper configuration
+  app.use(express.static(distPath, {
+    maxAge: '1d',
+    setHeaders: (res, path) => {
+      if (path.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      }
+    }
+  }));
+
+  // Handle assets directory specifically
+  app.use('/assets', express.static(path.join(distPath, 'assets')));
+
   // Domain-based static file serving
   app.use("*", (req, res, next) => {
     const host = req.get('host');
