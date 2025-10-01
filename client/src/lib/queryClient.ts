@@ -7,8 +7,9 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-// API Base URL configuration
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://app.cloudedze.ai';
+// API Base URL configuration - use empty string for relative URLs in production
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.MODE === 'development' ? 'http://localhost:3000' : '');
 
 export async function apiRequest(
   method: string,

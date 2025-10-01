@@ -1,8 +1,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-// API Base URL configuration
+// API Base URL configuration - use empty string for relative URLs in production
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ||
-  (import.meta.env.MODE === 'development' ? 'http://localhost:3000' : 'https://app.cloudedze.ai');
+  (import.meta.env.MODE === 'development' ? 'http://localhost:3000' : '');
 
 export function useAuth() {
   const queryClient = useQueryClient();

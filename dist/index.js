@@ -6567,7 +6567,7 @@ var vite_config_default = defineConfig({
   },
   root: path2.resolve(path2.dirname(fileURLToPath2(import.meta.url)), "client"),
   build: {
-    outDir: path2.resolve(path2.dirname(fileURLToPath2(import.meta.url)), "dist/public"),
+    outDir: path2.resolve(path2.dirname(fileURLToPath2(import.meta.url)), "dist"),
     emptyOutDir: true
   },
   server: {
@@ -6656,13 +6656,21 @@ async function setupVite(app2, server) {
   });
 }
 function serveStatic(app2) {
-  const distPath = path3.resolve(path3.dirname(fileURLToPath3(import.meta.url)), "..", "dist", "public");
+  const distPath = path3.resolve(path3.dirname(fileURLToPath3(import.meta.url)), "..", "dist");
   if (!fs2.existsSync(distPath)) {
     throw new Error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
     );
   }
-  app2.use(express.static(distPath));
+  app2.use(express.static(distPath, {
+    maxAge: "1d",
+    setHeaders: (res, path5) => {
+      if (path5.endsWith(".html")) {
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+      }
+    }
+  }));
+  app2.use("/assets", express.static(path3.join(distPath, "assets")));
   app2.use("*", (req, res, next) => {
     const host = req.get("host");
     const requestPath = req.path;
@@ -6696,25 +6704,26 @@ app.use(cors({
   origin: function(origin, callback) {
     const allowedOrigins = [
       "http://localhost:3000",
-      "http://localhost:443",
-      "https://localhost:443",
-      "http://34.14.198.14:443",
-      "https://34.14.198.14:443",
       "https://localhost:3000",
+      "http://34.14.198.14:3000",
+      "https://34.14.198.14:3000",
       "https://cloudedze.ai",
+      "http://cloudedze.ai",
       "https://app.cloudedze.ai",
-      "https://app.cloudedze.com"
+      "http://app.cloudedze.ai",
+      "https://app.cloudedze.com",
+      "http://app.cloudedze.com"
     ];
     console.log("CORS Request - Origin:", origin);
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
-    if (origin && (origin.includes("localhost") || origin.includes("127.0.0.1"))) {
-      console.log("CORS: Allowing localhost origin:", origin);
+    if (origin && (origin.includes("localhost") || origin.includes("127.0.0.1") || origin.includes("34.14.198.14"))) {
+      console.log("CORS Request allowed - localhost/server IP:", origin);
       return callback(null, true);
     }
-    console.log("CORS: Blocked origin:", origin);
+    console.log("CORS Request blocked for origin:", origin);
     const msg = "The CORS policy for this site does not allow access from the specified Origin.";
     return callback(new Error(msg), false);
   },
