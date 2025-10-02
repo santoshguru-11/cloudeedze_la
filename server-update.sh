@@ -18,19 +18,23 @@ echo -e "${YELLOW}2. Installing dependencies...${NC}"
 npm install
 
 echo ""
-echo -e "${YELLOW}3. Building application...${NC}"
+echo -e "${YELLOW}3. Updating database schema...${NC}"
+npm run db:push
+
+echo ""
+echo -e "${YELLOW}4. Building application...${NC}"
 npm run build
 
 echo ""
-echo -e "${YELLOW}4. Stopping PM2 process...${NC}"
+echo -e "${YELLOW}5. Stopping PM2 process...${NC}"
 pm2 stop cloudedze 2>/dev/null || echo "No existing process to stop"
 
 echo ""
-echo -e "${YELLOW}5. Starting application with PM2...${NC}"
+echo -e "${YELLOW}6. Starting application with PM2...${NC}"
 pm2 start dist/index.js --name cloudedze
 
 echo ""
-echo -e "${YELLOW}6. Saving PM2 configuration...${NC}"
+echo -e "${YELLOW}7. Saving PM2 configuration...${NC}"
 pm2 save
 
 echo ""
