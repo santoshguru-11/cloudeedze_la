@@ -229,6 +229,12 @@ export function InventoryScanner({ credentials, onInventoryScanned }: InventoryS
 
           {scanMutation.isPending && (
             <div className="space-y-3">
+              <Alert className="border-blue-200 bg-blue-50">
+                <Clock className="h-4 w-4 animate-spin text-blue-600" />
+                <AlertDescription className="text-blue-900 font-medium">
+                  🚀 Inventory scan in progress - discovering resources and generating cost analysis automatically...
+                </AlertDescription>
+              </Alert>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Scanning Progress</span>
                 <span className="text-sm text-muted-foreground">{scanProgress}%</span>
@@ -236,7 +242,7 @@ export function InventoryScanner({ credentials, onInventoryScanned }: InventoryS
               <Progress value={scanProgress} className="w-full" />
               <p className="text-sm text-muted-foreground flex items-center gap-2">
                 <Clock className="h-4 w-4 animate-spin" />
-                {currentProvider}
+                {currentProvider || 'Initializing scan...'}
               </p>
             </div>
           )}
@@ -631,34 +637,12 @@ function InventoryResults({
                   </Card>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold">Automated Cost Analysis</h3>
-                    <Button
-                      onClick={() => onGenerateCostAnalysis(inventory)}
-                      disabled={costAnalysisLoading}
-                      data-testid="button-generate-cost-analysis"
-                    >
-                      {costAnalysisLoading ? (
-                        <>
-                          <Clock className="h-4 w-4 mr-2 animate-spin" />
-                          Analyzing...
-                        </>
-                      ) : (
-                        <>
-                          <DollarSign className="h-4 w-4 mr-2" />
-                          Generate Cost Analysis
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                  <Alert>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      Click "Generate Cost Analysis" to automatically convert your discovered resources into cost requirements for multi-cloud comparison.
-                    </AlertDescription>
-                  </Alert>
-                </div>
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Inventory scan completed. Cost analysis will appear here automatically after the scan.
+                  </AlertDescription>
+                </Alert>
               )}
             </div>
           </TabsContent>

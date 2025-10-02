@@ -12,39 +12,7 @@ const app = express();
 
 // Enable CORS for all routes
 app.use(cors({
-  origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'https://localhost:3000',
-      'http://34.14.198.14:3000',
-      'https://34.14.198.14:3000',
-      'https://cloudedze.ai',
-      'http://cloudedze.ai',
-      'https://app.cloudedze.ai',
-      'http://app.cloudedze.ai',
-      'https://app.cloudedze.com',
-      'http://app.cloudedze.com'
-    ];
-
-    console.log('CORS Request - Origin:', origin);
-
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-
-    // For development, be more lenient with localhost and server IP
-    if (origin && (origin.includes('localhost') || origin.includes('127.0.0.1') || origin.includes('34.14.198.14'))) {
-      console.log('CORS Request allowed - localhost/server IP:', origin);
-      return callback(null, true);
-    }
-
-    console.log('CORS Request blocked for origin:', origin);
-    const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-    return callback(new Error(msg), false);
-  },
+  origin: true, // Allow all origins in development
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization', 'Cache-Control']

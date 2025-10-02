@@ -5734,46 +5734,115 @@ async function registerRoutes(app2) {
       }, userId);
       console.log(`\u2705 Saved inventory scan with ID: ${inventoryScan.id}`);
       console.log("Step 5: Generating cost analysis...");
+      console.log("Inventory data:", JSON.stringify({
+        resourceCount: inventory.resources?.length,
+        hasResources: !!inventory.resources,
+        sampleResource: inventory.resources?.[0]
+      }));
       let costAnalysis = null;
       try {
         const analysis = await inventoryService.generateAutomaticCostAnalysis(inventory);
-        costAnalysis = await storage.createCostAnalysis({
-          requirements: {
-            currency: "USD",
-            licensing: {
-              windows: { enabled: false, licenses: 0 },
-              sqlServer: { enabled: false, edition: "standard", licenses: 0 },
-              oracle: { enabled: false, edition: "standard", licenses: 0 },
-              vmware: { enabled: false, licenses: 0 },
-              redhat: { enabled: false, licenses: 0 },
-              sap: { enabled: false, licenses: 0 },
-              microsoftOffice365: { enabled: false, licenses: 0 }
-            },
-            compute: analysis.costRequirements.compute,
-            storage: analysis.costRequirements.storage,
-            database: analysis.costRequirements.database,
-            networking: analysis.costRequirements.networking,
-            security: analysis.costRequirements.security,
-            monitoring: analysis.costRequirements.monitoring,
-            analytics: analysis.costRequirements.analytics,
-            ai: analysis.costRequirements.ai,
-            devops: analysis.costRequirements.devops,
-            backup: analysis.costRequirements.backup,
-            iot: analysis.costRequirements.iot,
-            quantum: analysis.costRequirements.quantum,
-            media: analysis.costRequirements.media,
-            scenarios: {
-              disasterRecovery: { enabled: false, rto: 0, rpo: 0 },
-              highAvailability: { enabled: false, availability: 99.9 },
-              autoScaling: { enabled: false, minInstances: 1, maxInstances: 10 }
-            }
+        console.log("Analysis result:", JSON.stringify({
+          hasAnalysis: !!analysis,
+          hasCostRequirements: !!analysis?.costRequirements,
+          computeVms: analysis?.costRequirements?.compute?.vms
+        }));
+        const fullRequirements = {
+          currency: "USD",
+          licensing: {
+            windows: { enabled: false, licenses: 0 },
+            sqlServer: { enabled: false, edition: "standard", licenses: 0 },
+            oracle: { enabled: false, edition: "standard", licenses: 0 },
+            vmware: { enabled: false, licenses: 0 },
+            redhat: { enabled: false, licenses: 0 },
+            sap: { enabled: false, licenses: 0 },
+            microsoftOffice365: { enabled: false, licenses: 0 }
           },
-          results: analysis.results || {},
+          compute: analysis.costRequirements.compute,
+          storage: {
+            ...analysis.costRequirements.storage,
+            fileStorage: { size: 0, performanceMode: "general-purpose" }
+          },
+          database: {
+            ...analysis.costRequirements.database,
+            nosql: { engine: "none", readCapacity: 0, writeCapacity: 0, storage: 0 },
+            cache: { engine: "none", instanceClass: "small", nodes: 0 },
+            dataWarehouse: { nodes: 0, nodeType: "small", storage: 0 }
+          },
+          networking: {
+            ...analysis.costRequirements.networking,
+            cdn: { enabled: false, requests: 0, dataTransfer: 0 },
+            dns: { hostedZones: 0, queries: 0 },
+            vpn: { connections: 0, hours: 0 }
+          },
+          security: analysis.costRequirements.security || {
+            webFirewall: { enabled: false, requests: 0 },
+            identityManagement: { users: 0, authentications: 0 },
+            keyManagement: { keys: 0, operations: 0 },
+            threatDetection: { enabled: false, events: 0 }
+          },
+          monitoring: analysis.costRequirements.monitoring || {
+            metrics: 0,
+            logs: 0,
+            traces: 0,
+            alerts: 0
+          },
+          analytics: analysis.costRequirements.analytics || {
+            dataProcessing: { hours: 0, nodeType: "small" },
+            streaming: { shards: 0, records: 0 },
+            businessIntelligence: { users: 0, queries: 0 }
+          },
+          ai: analysis.costRequirements.ai || {
+            training: { hours: 0, instanceType: "cpu" },
+            inference: { requests: 0, instanceType: "cpu" },
+            prebuilt: { imageAnalysis: 0, textProcessing: 0, speechServices: 0 }
+          },
+          devops: analysis.costRequirements.devops || {
+            cicd: { buildMinutes: 0, parallelJobs: 0 },
+            containerRegistry: { storage: 0, pulls: 0 },
+            apiManagement: { requests: 0, endpoints: 0 }
+          },
+          backup: analysis.costRequirements.backup || {
+            storage: 0,
+            frequency: "daily",
+            retention: 30
+          },
+          iot: analysis.costRequirements.iot || {
+            devices: 0,
+            messages: 0,
+            dataProcessing: 0,
+            edgeLocations: 0
+          },
+          quantum: analysis.costRequirements.quantum || {
+            processingUnits: 0,
+            quantumAlgorithms: "optimization",
+            circuitComplexity: "basic"
+          },
+          media: analysis.costRequirements.media || {
+            videoStreaming: { hours: 0, quality: "1080p" },
+            transcoding: { minutes: 0, inputFormat: "standard" }
+          },
+          scenarios: {
+            disasterRecovery: { enabled: false, rtoHours: 24, rpoMinutes: 240, backupRegions: 1 },
+            compliance: { frameworks: [], auditLogging: false, dataResidency: "global" },
+            migration: { dataToMigrate: 0, applicationComplexity: "moderate" }
+          }
+        };
+        console.log("Calculating costs with cost calculator...");
+        const costResults = costCalculator.calculateCosts(fullRequirements);
+        console.log("Cost calculation complete");
+        costAnalysis = await storage.createCostAnalysis({
+          requirements: fullRequirements,
+          results: costResults,
           inventoryScanId: inventoryScan.id
         }, userId);
-        console.log("\u2705 Cost analysis created successfully");
+        console.log("\u2705 Cost analysis created successfully with actual pricing");
       } catch (analysisError) {
         console.log("\u26A0\uFE0F Cost analysis failed (continuing anyway):", analysisError.message);
+        console.log("\u26A0\uFE0F Cost analysis error stack:", analysisError.stack);
+        console.log("\u26A0\uFE0F Cost calculation input:", JSON.stringify({
+          inventoryResourceCount: inventory.resources?.length
+        }));
       }
       console.log("\u{1F389} INVENTORY SCAN COMPLETED SUCCESSFULLY");
       clearTimeout(timeout);
@@ -5781,7 +5850,10 @@ async function registerRoutes(app2) {
         success: true,
         inventory,
         scanId: inventoryScan.id,
-        costAnalysis
+        costAnalysis: costAnalysis ? {
+          analysisId: costAnalysis.id,
+          results: costAnalysis.results
+        } : null
       });
     } catch (error) {
       console.log("\u274C INVENTORY SCAN FAILED:", error.message);
@@ -6701,32 +6773,8 @@ function serveStatic(app2) {
 // server/index.ts
 var app = express2();
 app.use(cors({
-  origin: function(origin, callback) {
-    const allowedOrigins = [
-      "http://localhost:3000",
-      "https://localhost:3000",
-      "http://34.14.198.14:3000",
-      "https://34.14.198.14:3000",
-      "https://cloudedze.ai",
-      "http://cloudedze.ai",
-      "https://app.cloudedze.ai",
-      "http://app.cloudedze.ai",
-      "https://app.cloudedze.com",
-      "http://app.cloudedze.com"
-    ];
-    console.log("CORS Request - Origin:", origin);
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    if (origin && (origin.includes("localhost") || origin.includes("127.0.0.1") || origin.includes("34.14.198.14"))) {
-      console.log("CORS Request allowed - localhost/server IP:", origin);
-      return callback(null, true);
-    }
-    console.log("CORS Request blocked for origin:", origin);
-    const msg = "The CORS policy for this site does not allow access from the specified Origin.";
-    return callback(new Error(msg), false);
-  },
+  origin: true,
+  // Allow all origins in development
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept", "Authorization", "Cache-Control"]

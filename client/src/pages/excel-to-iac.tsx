@@ -41,6 +41,12 @@ interface CostEstimate {
   configuration: string;
 }
 
+interface MultiCloudCost {
+  estimates: CostEstimate[];
+  totalMonthly: number;
+  totalYearly: number;
+}
+
 interface UploadResponse {
   success: boolean;
   message: string;
@@ -51,6 +57,12 @@ interface UploadResponse {
   };
   requirements: InfrastructureRequirement[];
   costEstimates: CostEstimate[];
+  multiCloudCosts?: {
+    aws: MultiCloudCost;
+    azure: MultiCloudCost;
+    gcp: MultiCloudCost;
+    oci: MultiCloudCost;
+  };
 }
 
 export default function ExcelToIaC() {
@@ -112,11 +124,15 @@ export default function ExcelToIaC() {
     disabled: isUploading
   });
 
-  const downloadTerraform = async () => {
+  const downloadTerraform = async (provider: 'aws' | 'azure' | 'gcp' | 'oci') => {
     setIsGeneratingTerraform(true);
     try {
       const response = await fetch('/api/excel-to-iac/generate-terraform', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ provider }),
         credentials: 'include'
       });
 
@@ -129,7 +145,7 @@ export default function ExcelToIaC() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `infrastructure-${Date.now()}.tf`;
+      a.download = `infrastructure-${provider}-${Date.now()}.tf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -142,11 +158,15 @@ export default function ExcelToIaC() {
     }
   };
 
-  const downloadCSV = async () => {
+  const downloadCSV = async (provider: 'aws' | 'azure' | 'gcp' | 'oci' | 'combined') => {
     setIsGeneratingCSV(true);
     try {
       const response = await fetch('/api/excel-to-iac/generate-csv', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ provider }),
         credentials: 'include'
       });
 
@@ -159,7 +179,7 @@ export default function ExcelToIaC() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `cost-estimate-${Date.now()}.csv`;
+      a.download = `cost-estimate-${provider}-${Date.now()}.csv`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -304,26 +324,227 @@ export default function ExcelToIaC() {
               </Card>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex gap-4 justify-center">
-              <Button
-                onClick={downloadTerraform}
-                disabled={isGeneratingTerraform}
-                className="flex items-center gap-2"
-              >
-                <Code className="h-4 w-4" />
-                {isGeneratingTerraform ? 'Generating...' : 'Download Terraform Code'}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={downloadCSV}
-                disabled={isGeneratingCSV}
-                className="flex items-center gap-2"
-              >
-                <FileText className="h-4 w-4" />
-                {isGeneratingCSV ? 'Generating...' : 'Download Cost Estimate CSV'}
-              </Button>
-            </div>
+            {/* Multi-Cloud Cost Comparison */}
+            {uploadResponse.multiCloudCosts && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="h-5 w-5" />
+                    Multi-Cloud Cost Comparison
+                  </CardTitle>
+                  <CardDescription>
+                    Compare costs across AWS, Azure, GCP, and OCI
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* AWS */}
+                    <div className="border rounded-lg p-4 bg-orange-50 border-orange-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                        <h3 className="font-semibold text-orange-900">AWS</h3>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-2xl font-bold text-orange-600">
+                          ${uploadResponse.multiCloudCosts.aws.totalMonthly.toFixed(2)}
+                        </div>
+                        <p className="text-sm text-orange-700">per month</p>
+                        <p className="text-xs text-orange-600">
+                          ${uploadResponse.multiCloudCosts.aws.totalYearly.toFixed(2)}/year
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Azure */}
+                    <div className="border rounded-lg p-4 bg-blue-50 border-blue-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                        <h3 className="font-semibold text-blue-900">Azure</h3>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-2xl font-bold text-blue-600">
+                          ${uploadResponse.multiCloudCosts.azure.totalMonthly.toFixed(2)}
+                        </div>
+                        <p className="text-sm text-blue-700">per month</p>
+                        <p className="text-xs text-blue-600">
+                          ${uploadResponse.multiCloudCosts.azure.totalYearly.toFixed(2)}/year
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* GCP */}
+                    <div className="border rounded-lg p-4 bg-red-50 border-red-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                        <h3 className="font-semibold text-red-900">GCP</h3>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-2xl font-bold text-red-600">
+                          ${uploadResponse.multiCloudCosts.gcp.totalMonthly.toFixed(2)}
+                        </div>
+                        <p className="text-sm text-red-700">per month</p>
+                        <p className="text-xs text-red-600">
+                          ${uploadResponse.multiCloudCosts.gcp.totalYearly.toFixed(2)}/year
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* OCI */}
+                    <div className="border rounded-lg p-4 bg-red-50 border-red-300">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-3 h-3 bg-red-700 rounded-full"></div>
+                        <h3 className="font-semibold text-red-900">OCI</h3>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-2xl font-bold text-red-700">
+                          ${uploadResponse.multiCloudCosts.oci.totalMonthly.toFixed(2)}
+                        </div>
+                        <p className="text-sm text-red-800">per month</p>
+                        <p className="text-xs text-red-700">
+                          ${uploadResponse.multiCloudCosts.oci.totalYearly.toFixed(2)}/year
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Best Value Badge */}
+                  <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      <span className="text-sm font-medium text-green-900">
+                        Best Value: {
+                          (() => {
+                            const costs = uploadResponse.multiCloudCosts;
+                            const providers = [
+                              { name: 'AWS', cost: costs.aws.totalMonthly },
+                              { name: 'Azure', cost: costs.azure.totalMonthly },
+                              { name: 'GCP', cost: costs.gcp.totalMonthly },
+                              { name: 'OCI', cost: costs.oci.totalMonthly }
+                            ];
+                            const cheapest = providers.reduce((min, p) => p.cost < min.cost ? p : min);
+                            return `${cheapest.name} - $${cheapest.cost.toFixed(2)}/month`;
+                          })()
+                        }
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Multi-Cloud Terraform Download */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Code className="h-5 w-5" />
+                  Download Multi-Cloud Terraform Code
+                </CardTitle>
+                <CardDescription>
+                  Generate Terraform code for all major cloud providers
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <Button
+                    onClick={() => downloadTerraform('aws')}
+                    disabled={isGeneratingTerraform}
+                    className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600"
+                  >
+                    <Code className="h-4 w-4" />
+                    AWS
+                  </Button>
+                  <Button
+                    onClick={() => downloadTerraform('azure')}
+                    disabled={isGeneratingTerraform}
+                    className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600"
+                  >
+                    <Code className="h-4 w-4" />
+                    Azure
+                  </Button>
+                  <Button
+                    onClick={() => downloadTerraform('gcp')}
+                    disabled={isGeneratingTerraform}
+                    className="flex items-center gap-2 bg-red-500 hover:bg-red-600"
+                  >
+                    <Code className="h-4 w-4" />
+                    GCP
+                  </Button>
+                  <Button
+                    onClick={() => downloadTerraform('oci')}
+                    disabled={isGeneratingTerraform}
+                    className="flex items-center gap-2 bg-red-700 hover:bg-red-800"
+                  >
+                    <Code className="h-4 w-4" />
+                    OCI
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Multi-Cloud Cost CSV Download */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Download Cost Estimates (CSV)
+                </CardTitle>
+                <CardDescription>
+                  Download detailed cost breakdowns for each provider
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => downloadCSV('aws')}
+                    disabled={isGeneratingCSV}
+                    className="flex items-center gap-2 border-orange-300 hover:bg-orange-50"
+                  >
+                    <Download className="h-4 w-4" />
+                    AWS CSV
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => downloadCSV('azure')}
+                    disabled={isGeneratingCSV}
+                    className="flex items-center gap-2 border-blue-300 hover:bg-blue-50"
+                  >
+                    <Download className="h-4 w-4" />
+                    Azure CSV
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => downloadCSV('gcp')}
+                    disabled={isGeneratingCSV}
+                    className="flex items-center gap-2 border-red-300 hover:bg-red-50"
+                  >
+                    <Download className="h-4 w-4" />
+                    GCP CSV
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => downloadCSV('oci')}
+                    disabled={isGeneratingCSV}
+                    className="flex items-center gap-2 border-red-400 hover:bg-red-50"
+                  >
+                    <Download className="h-4 w-4" />
+                    OCI CSV
+                  </Button>
+                  <Button
+                    variant="default"
+                    onClick={() => downloadCSV('combined')}
+                    disabled={isGeneratingCSV}
+                    className="flex items-center gap-2 col-span-2 md:col-span-1 bg-green-600 hover:bg-green-700"
+                  >
+                    <Download className="h-4 w-4" />
+                    {isGeneratingCSV ? 'Generating...' : 'All Providers'}
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-600 mt-3">
+                  💡 Download "All Providers" for a comprehensive comparison across all clouds with savings analysis
+                </p>
+              </CardContent>
+            </Card>
 
             {/* Infrastructure Requirements */}
             <Card>

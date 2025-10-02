@@ -666,48 +666,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Step 5: Generate cost analysis (optional)
       console.log('Step 5: Generating cost analysis...');
+      console.log('Inventory data:', JSON.stringify({
+        resourceCount: inventory.resources?.length,
+        hasResources: !!inventory.resources,
+        sampleResource: inventory.resources?.[0]
+      }));
       let costAnalysis = null;
       try {
         const analysis = await inventoryService.generateAutomaticCostAnalysis(inventory);
-        
-        costAnalysis = await storage.createCostAnalysis({
-          requirements: {
-            currency: 'USD',
-            licensing: {
-              windows: { enabled: false, licenses: 0 },
-              sqlServer: { enabled: false, edition: 'standard', licenses: 0 },
-              oracle: { enabled: false, edition: 'standard', licenses: 0 },
-              vmware: { enabled: false, licenses: 0 },
-              redhat: { enabled: false, licenses: 0 },
-              sap: { enabled: false, licenses: 0 },
-              microsoftOffice365: { enabled: false, licenses: 0 }
-            },
-            compute: analysis.costRequirements.compute,
-            storage: analysis.costRequirements.storage,
-            database: analysis.costRequirements.database,
-            networking: analysis.costRequirements.networking,
-            security: analysis.costRequirements.security,
-            monitoring: analysis.costRequirements.monitoring,
-            analytics: analysis.costRequirements.analytics,
-            ai: analysis.costRequirements.ai,
-            devops: analysis.costRequirements.devops,
-            backup: analysis.costRequirements.backup,
-            iot: analysis.costRequirements.iot,
-            quantum: analysis.costRequirements.quantum,
-            media: analysis.costRequirements.media,
-            scenarios: {
-              disasterRecovery: { enabled: false, rto: 0, rpo: 0 },
-              highAvailability: { enabled: false, availability: 99.9 },
-              autoScaling: { enabled: false, minInstances: 1, maxInstances: 10 }
-            }
+        console.log('Analysis result:', JSON.stringify({
+          hasAnalysis: !!analysis,
+          hasCostRequirements: !!analysis?.costRequirements,
+          computeVms: analysis?.costRequirements?.compute?.vms
+        }));
+
+        // Build full requirements object for cost calculation
+        const fullRequirements = {
+          currency: 'USD',
+          licensing: {
+            windows: { enabled: false, licenses: 0 },
+            sqlServer: { enabled: false, edition: 'standard' as const, licenses: 0 },
+            oracle: { enabled: false, edition: 'standard' as const, licenses: 0 },
+            vmware: { enabled: false, licenses: 0 },
+            redhat: { enabled: false, licenses: 0 },
+            sap: { enabled: false, licenses: 0 },
+            microsoftOffice365: { enabled: false, licenses: 0 }
           },
-          results: analysis.results || {},
+          compute: analysis.costRequirements.compute,
+          storage: {
+            ...analysis.costRequirements.storage,
+            fileStorage: { size: 0, performanceMode: 'general-purpose' as const }
+          },
+          database: {
+            ...analysis.costRequirements.database,
+            nosql: { engine: 'none' as const, readCapacity: 0, writeCapacity: 0, storage: 0 },
+            cache: { engine: 'none' as const, instanceClass: 'small' as const, nodes: 0 },
+            dataWarehouse: { nodes: 0, nodeType: 'small' as const, storage: 0 }
+          },
+          networking: {
+            ...analysis.costRequirements.networking,
+            cdn: { enabled: false, requests: 0, dataTransfer: 0 },
+            dns: { hostedZones: 0, queries: 0 },
+            vpn: { connections: 0, hours: 0 }
+          },
+          security: analysis.costRequirements.security || {
+            webFirewall: { enabled: false, requests: 0 },
+            identityManagement: { users: 0, authentications: 0 },
+            keyManagement: { keys: 0, operations: 0 },
+            threatDetection: { enabled: false, events: 0 }
+          },
+          monitoring: analysis.costRequirements.monitoring || {
+            metrics: 0,
+            logs: 0,
+            traces: 0,
+            alerts: 0
+          },
+          analytics: analysis.costRequirements.analytics || {
+            dataProcessing: { hours: 0, nodeType: 'small' as const },
+            streaming: { shards: 0, records: 0 },
+            businessIntelligence: { users: 0, queries: 0 }
+          },
+          ai: analysis.costRequirements.ai || {
+            training: { hours: 0, instanceType: 'cpu' as const },
+            inference: { requests: 0, instanceType: 'cpu' as const },
+            prebuilt: { imageAnalysis: 0, textProcessing: 0, speechServices: 0 }
+          },
+          devops: analysis.costRequirements.devops || {
+            cicd: { buildMinutes: 0, parallelJobs: 0 },
+            containerRegistry: { storage: 0, pulls: 0 },
+            apiManagement: { requests: 0, endpoints: 0 }
+          },
+          backup: analysis.costRequirements.backup || {
+            storage: 0,
+            frequency: 'daily' as const,
+            retention: 30
+          },
+          iot: analysis.costRequirements.iot || {
+            devices: 0,
+            messages: 0,
+            dataProcessing: 0,
+            edgeLocations: 0
+          },
+          quantum: analysis.costRequirements.quantum || {
+            processingUnits: 0,
+            quantumAlgorithms: 'optimization' as const,
+            circuitComplexity: 'basic' as const
+          },
+          media: analysis.costRequirements.media || {
+            videoStreaming: { hours: 0, quality: '1080p' as const },
+            transcoding: { minutes: 0, inputFormat: 'standard' as const }
+          },
+          scenarios: {
+            disasterRecovery: { enabled: false, rtoHours: 24, rpoMinutes: 240, backupRegions: 1 },
+            compliance: { frameworks: [], auditLogging: false, dataResidency: 'global' as const },
+            migration: { dataToMigrate: 0, applicationComplexity: 'moderate' as const }
+          }
+        };
+
+        // Actually calculate the costs!
+        console.log('Calculating costs with cost calculator...');
+        const costResults = costCalculator.calculateCosts(fullRequirements);
+        console.log('Cost calculation complete');
+
+        costAnalysis = await storage.createCostAnalysis({
+          requirements: fullRequirements,
+          results: costResults,
           inventoryScanId: inventoryScan.id
         }, userId);
-        
-        console.log('✅ Cost analysis created successfully');
-      } catch (analysisError) {
+
+        console.log('✅ Cost analysis created successfully with actual pricing');
+      } catch (analysisError: any) {
         console.log('⚠️ Cost analysis failed (continuing anyway):', analysisError.message);
+        console.log('⚠️ Cost analysis error stack:', analysisError.stack);
+        console.log('⚠️ Cost calculation input:', JSON.stringify({
+          inventoryResourceCount: inventory.resources?.length
+        }));
       }
       
       console.log('🎉 INVENTORY SCAN COMPLETED SUCCESSFULLY');
@@ -719,7 +792,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true,
         inventory,
         scanId: inventoryScan.id,
-        costAnalysis: costAnalysis
+        costAnalysis: costAnalysis ? {
+          analysisId: costAnalysis.id,
+          results: costAnalysis.results
+        } : null
       });
       
     } catch (error: any) {
@@ -1460,13 +1536,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const requirements = await excelToIaCService.parseExcelFile(req.file.buffer);
       console.log(`📊 Parsed ${requirements.length} infrastructure requirements`);
 
-      // Generate cost estimates
+      // Generate multi-cloud cost estimates
+      const multiCloudCosts = excelToIaCService.generateMultiCloudCostEstimate(requirements);
+
+      // Keep AWS costs for backward compatibility
       const costEstimates = excelToIaCService.generateCostEstimate(requirements);
 
       // Store in session for later use
       const sessionData = {
         requirements,
         costEstimates,
+        multiCloudCosts,
         uploadedAt: new Date().toISOString(),
         fileName: req.file.originalname
       };
@@ -1484,7 +1564,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalYearlyCost: costEstimates.reduce((sum, est) => sum + est.yearlyEstimate, 0)
         },
         requirements: requirements.slice(0, 5), // Preview first 5
-        costEstimates: costEstimates.slice(0, 5) // Preview first 5
+        costEstimates: costEstimates.slice(0, 5), // Preview first 5
+        multiCloudCosts // Include full multi-cloud costs
       });
 
     } catch (error) {
@@ -1504,16 +1585,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No Excel data found. Please upload an Excel file first." });
       }
 
+      const { provider } = req.body; // Get the specific provider requested
+
       console.log('🏗️ Generating Terraform code for', iacData.requirements.length, 'resources');
 
-      const terraformCode = excelToIaCService.generateTerraformCode(iacData.requirements);
+      // If a specific provider is requested, generate only that one
+      if (provider && ['aws', 'azure', 'gcp', 'oci'].includes(provider)) {
+        let terraformCode: string;
 
-      // Set headers for file download
-      const fileName = `infrastructure-${Date.now()}.tf`;
-      res.setHeader('Content-Type', 'application/octet-stream');
-      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+        switch (provider) {
+          case 'aws':
+            terraformCode = excelToIaCService.generateTerraformCode(iacData.requirements);
+            break;
+          case 'azure':
+            terraformCode = excelToIaCService.generateAzureTerraformCode(iacData.requirements);
+            break;
+          case 'gcp':
+            terraformCode = excelToIaCService.generateGCPTerraformCode(iacData.requirements);
+            break;
+          case 'oci':
+            terraformCode = excelToIaCService.generateOCITerraformCode(iacData.requirements);
+            break;
+          default:
+            terraformCode = excelToIaCService.generateTerraformCode(iacData.requirements);
+        }
 
-      res.send(terraformCode);
+        // Set headers for file download
+        const fileName = `infrastructure-${provider}-${Date.now()}.tf`;
+        res.setHeader('Content-Type', 'application/octet-stream');
+        res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+
+        return res.send(terraformCode);
+      }
+
+      // Otherwise, generate for all providers and return as JSON
+      const multiCloudTerraform = excelToIaCService.generateMultiCloudTerraform(iacData.requirements);
+
+      res.json({
+        success: true,
+        terraform: multiCloudTerraform
+      });
 
     } catch (error) {
       console.error("Terraform generation error:", error);
@@ -1528,13 +1639,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/excel-to-iac/generate-csv", isAuthenticated, async (req: any, res) => {
     try {
       const iacData = req.session.iacData;
-      if (!iacData || !iacData.costEstimates) {
+      if (!iacData || !iacData.requirements) {
         return res.status(400).json({ message: "No cost estimate data found. Please upload an Excel file first." });
       }
 
-      console.log('💰 Generating cost estimate CSV for', iacData.costEstimates.length, 'resources');
+      const { provider } = req.body; // Get the specific provider requested
 
-      const csvContent = excelToIaCService.generateCSV(iacData.costEstimates);
+      console.log('💰 Generating cost estimate CSV for', iacData.requirements.length, 'resources');
+
+      // If a specific provider is requested, generate only that one
+      if (provider && ['aws', 'azure', 'gcp', 'oci', 'combined'].includes(provider)) {
+        const multiCloudCSVs = excelToIaCService.generateMultiCloudCSV(iacData.requirements);
+        const csvContent = multiCloudCSVs[provider];
+
+        // Set headers for file download
+        const fileName = `cost-estimate-${provider}-${Date.now()}.csv`;
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+
+        return res.send(csvContent);
+      }
+
+      // For backward compatibility, default to AWS
+      const csvContent = excelToIaCService.generateCSV(iacData.costEstimates || [], 'AWS');
 
       // Set headers for file download
       const fileName = `cost-estimate-${Date.now()}.csv`;

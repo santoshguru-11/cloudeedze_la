@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Download, Upload, FileSpreadsheet, CheckCircle, AlertCircle, X, Zap } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import CloudedzeLogo from '../assets/logos/cloudedze-logo.svg';
+import CostResults from '@/components/cost-results';
 
 interface ValidationResult {
   isValid: boolean;
@@ -495,6 +496,16 @@ export default function ExcelUpload() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Display multi-cloud cost analysis */}
+                  {uploadResult.costAnalysis && uploadResult.costAnalysis.results && (
+                    <div className="mt-8">
+                      <CostResults
+                        results={uploadResult.costAnalysis.results}
+                        analysisId={uploadResult.costAnalysis.analysisId}
+                      />
+                    </div>
+                  )}
                 </div>
               ) : validationResult ? (
                 <div className="space-y-4">

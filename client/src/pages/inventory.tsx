@@ -684,64 +684,6 @@ export function InventoryPage() {
                 </CardContent>
               </Card>
 
-              {/* Next Steps */}
-              <Card className="border-0 shadow-lg bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Zap className="h-5 w-5 text-blue-600" />
-                    Ready for Cost Analysis
-                  </CardTitle>
-                  <CardDescription>
-                    Your infrastructure has been successfully discovered and is ready for comprehensive cost analysis
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid md:grid-cols-2 gap-8">
-                    <div className="space-y-4">
-                      <h4 className="font-semibold text-lg">What's Next?</h4>
-                      <ul className="space-y-3">
-                        <li className="flex items-start gap-3">
-                          <div className="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
-                          <div>
-                            <p className="font-medium">Generate Cost Analysis</p>
-                            <p className="text-sm text-muted-foreground">Compare costs across all cloud providers</p>
-                          </div>
-                        </li>
-                        <li className="flex items-start gap-3">
-                          <div className="w-2 h-2 bg-green-600 rounded-full mt-2 flex-shrink-0"></div>
-                          <div>
-                            <p className="font-medium">Optimization Recommendations</p>
-                            <p className="text-sm text-muted-foreground">Get AI-powered suggestions for cost savings</p>
-                          </div>
-                        </li>
-                        <li className="flex items-start gap-3">
-                          <div className="w-2 h-2 bg-purple-600 rounded-full mt-2 flex-shrink-0"></div>
-                          <div>
-                            <p className="font-medium">Multi-Cloud Strategy</p>
-                            <p className="text-sm text-muted-foreground">Explore hybrid cloud opportunities</p>
-                          </div>
-                        </li>
-                      </ul>
-                    </div>
-                    
-                    <div className="flex flex-col justify-center">
-                      <Button 
-                        onClick={proceedToCalculator}
-                        size="lg"
-                        className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-4 text-lg"
-                        data-testid="button-proceed-to-calculator"
-                      >
-                        <BarChart3 className="h-5 w-5 mr-2" />
-                        Generate Cost Analysis
-                        <ArrowRight className="h-5 w-5 ml-2" />
-                      </Button>
-                      <p className="text-center text-sm text-muted-foreground mt-3">
-                        Get detailed cost comparisons and optimization recommendations
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
 
               {/* Display the full inventory scanner results */}
               <InventoryScanner
