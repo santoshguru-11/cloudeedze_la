@@ -4376,8 +4376,17 @@ var ExcelToIaCService = class {
       throw new Error("Failed to parse Excel file");
     }
   }
+  // Generate Terraform for all cloud providers
+  generateMultiCloudTerraform(requirements) {
+    return {
+      aws: this.generateTerraformCode(requirements),
+      azure: this.generateAzureTerraformCode(requirements),
+      gcp: this.generateGCPTerraformCode(requirements),
+      oci: this.generateOCITerraformCode(requirements)
+    };
+  }
   generateTerraformCode(requirements) {
-    let terraformCode = `# Generated Infrastructure as Code
+    let terraformCode = `# Generated Infrastructure as Code for AWS
 # Source: Excel Infrastructure Requirements
 # Generated: ${(/* @__PURE__ */ new Date()).toISOString()}
 
@@ -4894,11 +4903,11 @@ resource "aws_lb_target_group_attachment" "${resourceName}_tg_attachment" {
     const storageCost = storageGB * 0.138;
     return instanceCost + storageCost;
   }
-  generateCSV(estimates) {
+  generateCSV(estimates, provider = "AWS") {
     const totalUpfront = 0;
     const totalMonthly = estimates.reduce((sum, est) => sum + est.monthlyEstimate, 0);
     const total12Months = totalMonthly * 12;
-    let csv = `Estimate summary
+    let csv = `${provider} Cost Estimate Summary
 `;
     csv += `Upfront cost,Monthly cost,Total 12 months cost,Currency
 `;
@@ -4913,16 +4922,1334 @@ resource "aws_lb_target_group_attachment" "${resourceName}_tg_attachment" {
     csv += `Group hierarchy,Region,Description,Service,Upfront,Monthly,First 12 months total,Currency,Status,Configuration summary
 `;
     estimates.forEach((est) => {
-      csv += `BYOL-Cost-estimate,${est.region},${est.resourceName},${est.service},0,${est.monthlyEstimate.toFixed(2)},${est.yearlyEstimate.toFixed(2)},USD,,${est.configuration}
+      csv += `${provider}-Cost-estimate,${est.region},${est.resourceName},${est.service},0,${est.monthlyEstimate.toFixed(2)},${est.yearlyEstimate.toFixed(2)},USD,,${est.configuration}
 `;
     });
     csv += `
 
 Acknowledgement
 `;
-    csv += `"* AWS Pricing Calculator provides only an estimate of your AWS fees and doesn't include any taxes that might apply. Your actual fees depend on a variety of factors, including your actual usage of AWS services."
+    csv += `"* This is an estimate of cloud provider fees and doesn't include any taxes that might apply. Your actual fees depend on a variety of factors, including your actual usage of cloud services."
 `;
     return csv;
+  }
+  generateMultiCloudCSV(requirements) {
+    const multiCloudCosts = this.generateMultiCloudCostEstimate(requirements);
+    return {
+      aws: this.generateCSV(multiCloudCosts.aws.estimates, "AWS"),
+      azure: this.generateCSV(multiCloudCosts.azure.estimates, "Azure"),
+      gcp: this.generateCSV(multiCloudCosts.gcp.estimates, "GCP"),
+      oci: this.generateCSV(multiCloudCosts.oci.estimates, "OCI"),
+      combined: this.generateCombinedCSV(multiCloudCosts)
+    };
+  }
+  generateCombinedCSV(multiCloudCosts) {
+    let csv = `Multi-Cloud Cost Comparison Summary
+
+`;
+    csv += `Provider,Monthly Cost,Yearly Cost,Currency
+`;
+    csv += `AWS,${multiCloudCosts.aws.totalMonthly.toFixed(2)},${multiCloudCosts.aws.totalYearly.toFixed(2)},USD
+`;
+    csv += `Azure,${multiCloudCosts.azure.totalMonthly.toFixed(2)},${multiCloudCosts.azure.totalYearly.toFixed(2)},USD
+`;
+    csv += `GCP,${multiCloudCosts.gcp.totalMonthly.toFixed(2)},${multiCloudCosts.gcp.totalYearly.toFixed(2)},USD
+`;
+    csv += `OCI,${multiCloudCosts.oci.totalMonthly.toFixed(2)},${multiCloudCosts.oci.totalYearly.toFixed(2)},USD
+`;
+    const providers = [
+      { name: "AWS", monthly: multiCloudCosts.aws.totalMonthly },
+      { name: "Azure", monthly: multiCloudCosts.azure.totalMonthly },
+      { name: "GCP", monthly: multiCloudCosts.gcp.totalMonthly },
+      { name: "OCI", monthly: multiCloudCosts.oci.totalMonthly }
+    ];
+    const cheapest = providers.reduce((min, p) => p.monthly < min.monthly ? p : min);
+    const mostExpensive = providers.reduce((max, p) => p.monthly > max.monthly ? p : max);
+    const savings = mostExpensive.monthly - cheapest.monthly;
+    const savingsPercent = (savings / mostExpensive.monthly * 100).toFixed(1);
+    csv += `
+Best Value,${cheapest.name}
+`;
+    csv += `Potential Savings,"$${savings.toFixed(2)}/month (${savingsPercent}% vs ${mostExpensive.name})"
+`;
+    csv += `
+
+=== AWS Detailed Breakdown ===
+`;
+    csv += `Region,Description,Service,Monthly,Yearly,Configuration
+`;
+    multiCloudCosts.aws.estimates.forEach((est) => {
+      csv += `${est.region},${est.resourceName},${est.service},${est.monthlyEstimate.toFixed(2)},${est.yearlyEstimate.toFixed(2)},"${est.configuration}"
+`;
+    });
+    csv += `
+
+=== Azure Detailed Breakdown ===
+`;
+    csv += `Region,Description,Service,Monthly,Yearly,Configuration
+`;
+    multiCloudCosts.azure.estimates.forEach((est) => {
+      csv += `${est.region},${est.resourceName},${est.service},${est.monthlyEstimate.toFixed(2)},${est.yearlyEstimate.toFixed(2)},"${est.configuration}"
+`;
+    });
+    csv += `
+
+=== GCP Detailed Breakdown ===
+`;
+    csv += `Region,Description,Service,Monthly,Yearly,Configuration
+`;
+    multiCloudCosts.gcp.estimates.forEach((est) => {
+      csv += `${est.region},${est.resourceName},${est.service},${est.monthlyEstimate.toFixed(2)},${est.yearlyEstimate.toFixed(2)},"${est.configuration}"
+`;
+    });
+    csv += `
+
+=== OCI Detailed Breakdown ===
+`;
+    csv += `Region,Description,Service,Monthly,Yearly,Configuration
+`;
+    multiCloudCosts.oci.estimates.forEach((est) => {
+      csv += `${est.region},${est.resourceName},${est.service},${est.monthlyEstimate.toFixed(2)},${est.yearlyEstimate.toFixed(2)},"${est.configuration}"
+`;
+    });
+    csv += `
+
+Acknowledgement
+`;
+    csv += `"* This multi-cloud comparison provides estimates from each provider and doesn't include any taxes that might apply. Actual costs depend on various factors including usage patterns, commitment terms, and specific service configurations."
+`;
+    return csv;
+  }
+  // Azure Terraform Generation
+  generateAzureTerraformCode(requirements) {
+    let terraformCode = `# Generated Infrastructure as Code for Azure
+# Source: Excel Infrastructure Requirements
+# Generated: ${(/* @__PURE__ */ new Date()).toISOString()}
+
+terraform {
+  required_version = ">= 1.0"
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 3.0"
+    }
+  }
+}
+
+provider "azurerm" {
+  features {}
+}
+
+# Variables
+variable "environment" {
+  description = "Environment name"
+  type        = string
+  default     = "production"
+}
+
+variable "project_name" {
+  description = "Project name"
+  type        = string
+  default     = "infrastructure"
+}
+
+variable "location" {
+  description = "Azure region"
+  type        = string
+  default     = "centralindia"
+}
+
+# Resource Group
+resource "azurerm_resource_group" "main" {
+  name     = "\${var.project_name}-rg"
+  location = var.location
+
+  tags = {
+    Environment = var.environment
+  }
+}
+
+# Virtual Network
+resource "azurerm_virtual_network" "main" {
+  name                = "\${var.project_name}-vnet"
+  address_space       = ["10.0.0.0/16"]
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+
+  tags = {
+    Environment = var.environment
+  }
+}
+
+# Subnets
+resource "azurerm_subnet" "public" {
+  name                 = "\${var.project_name}-public-subnet"
+  resource_group_name  = azurerm_resource_group.main.name
+  virtual_network_name = azurerm_virtual_network.main.name
+  address_prefixes     = ["10.0.1.0/24"]
+}
+
+resource "azurerm_subnet" "private" {
+  name                 = "\${var.project_name}-private-subnet"
+  resource_group_name  = azurerm_resource_group.main.name
+  virtual_network_name = azurerm_virtual_network.main.name
+  address_prefixes     = ["10.0.10.0/24"]
+}
+
+# Network Security Groups
+resource "azurerm_network_security_group" "web" {
+  name                = "\${var.project_name}-web-nsg"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+
+  security_rule {
+    name                       = "HTTP"
+    priority                   = 100
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "80"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
+
+  security_rule {
+    name                       = "HTTPS"
+    priority                   = 101
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "443"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
+}
+
+resource "azurerm_network_security_group" "app" {
+  name                = "\${var.project_name}-app-nsg"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+
+  security_rule {
+    name                       = "AppPort"
+    priority                   = 100
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "8080"
+    source_address_prefix      = "10.0.0.0/16"
+    destination_address_prefix = "*"
+  }
+}
+
+resource "azurerm_network_security_group" "db" {
+  name                = "\${var.project_name}-db-nsg"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+
+  security_rule {
+    name                       = "OracleDB"
+    priority                   = 100
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "1521"
+    source_address_prefix      = "10.0.0.0/16"
+    destination_address_prefix = "*"
+  }
+}
+
+`;
+    requirements.forEach((req, index2) => {
+      terraformCode += this.generateAzureResourceForRequirement(req, index2);
+    });
+    terraformCode += `
+# Outputs
+output "resource_group_name" {
+  description = "Name of the resource group"
+  value       = azurerm_resource_group.main.name
+}
+
+output "vnet_id" {
+  description = "ID of the virtual network"
+  value       = azurerm_virtual_network.main.id
+}
+`;
+    return terraformCode;
+  }
+  generateAzureResourceForRequirement(req, index2) {
+    const resourceName = `${req.applicationName.toLowerCase().replace(/[^a-z0-9]/g, "_")}_${index2}`;
+    let code = "";
+    if (req.workloadType.toLowerCase().includes("db")) {
+      code += this.generateAzureDBInstance(req, resourceName);
+    } else {
+      code += this.generateAzureVM(req, resourceName);
+    }
+    if (req.loadBalanced.toLowerCase().includes("yes")) {
+      code += this.generateAzureLoadBalancer(req, resourceName);
+    }
+    return code;
+  }
+  generateAzureVM(req, resourceName) {
+    const vmSize = this.mapAzureVMSize(req.cpuName);
+    return `
+# Azure VM for ${req.applicationName}
+resource "azurerm_network_interface" "${resourceName}_nic" {
+  name                = "${resourceName}-nic"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+
+  ip_configuration {
+    name                          = "internal"
+    subnet_id                     = azurerm_subnet.private.id
+    private_ip_address_allocation = "Dynamic"
+  }
+}
+
+resource "azurerm_linux_virtual_machine" "${resourceName}" {
+  name                = "${req.applicationName}-${req.workloadType}"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  size                = "${vmSize}"
+  admin_username      = "adminuser"
+
+  network_interface_ids = [
+    azurerm_network_interface.${resourceName}_nic.id,
+  ]
+
+  admin_ssh_key {
+    username   = "adminuser"
+    public_key = file("~/.ssh/id_rsa.pub")
+  }
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Premium_LRS"
+    disk_size_gb         = ${req.bootSpaceGB || 30}
+  }
+
+  source_image_reference {
+    publisher = "Canonical"
+    offer     = "0001-com-ubuntu-server-focal"
+    sku       = "20_04-lts-gen2"
+    version   = "latest"
+  }
+
+  tags = {
+    Environment = var.environment
+    Workload    = "${req.workloadType}"
+    Software    = "${req.softwares}"
+  }
+}
+
+${req.dataSpaceGB > 0 ? `
+resource "azurerm_managed_disk" "${resourceName}_data" {
+  name                 = "${resourceName}-data-disk"
+  location             = azurerm_resource_group.main.location
+  resource_group_name  = azurerm_resource_group.main.name
+  storage_account_type = "Premium_LRS"
+  create_option        = "Empty"
+  disk_size_gb         = ${req.dataSpaceGB}
+}
+
+resource "azurerm_virtual_machine_data_disk_attachment" "${resourceName}_data_attach" {
+  managed_disk_id    = azurerm_managed_disk.${resourceName}_data.id
+  virtual_machine_id = azurerm_linux_virtual_machine.${resourceName}.id
+  lun                = "0"
+  caching            = "ReadWrite"
+}
+` : ""}
+`;
+  }
+  generateAzureDBInstance(req, resourceName) {
+    return `
+# Azure Database for ${req.applicationName}
+resource "azurerm_mssql_server" "${resourceName}_sql" {
+  name                         = "${resourceName}-sqlserver"
+  resource_group_name          = azurerm_resource_group.main.name
+  location                     = azurerm_resource_group.main.location
+  version                      = "12.0"
+  administrator_login          = "sqladmin"
+  administrator_login_password = "Change-Me-In-Production-123!"
+  minimum_tls_version          = "1.2"
+
+  tags = {
+    Environment = var.environment
+  }
+}
+
+resource "azurerm_mssql_database" "${resourceName}_db" {
+  name      = "${req.applicationName}-db"
+  server_id = azurerm_mssql_server.${resourceName}_sql.id
+  sku_name  = "S1"
+
+  max_size_gb = ${Math.max(req.dataSpaceGB || 100, 100)}
+
+  tags = {
+    Environment = var.environment
+    Workload    = "Database"
+  }
+}
+`;
+  }
+  generateAzureLoadBalancer(req, resourceName) {
+    return `
+# Azure Load Balancer for ${req.applicationName}
+resource "azurerm_public_ip" "${resourceName}_lb_ip" {
+  name                = "${resourceName}-lb-ip"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  allocation_method   = "Static"
+  sku                 = "Standard"
+}
+
+resource "azurerm_lb" "${resourceName}_lb" {
+  name                = "${resourceName}-lb"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  sku                 = "Standard"
+
+  frontend_ip_configuration {
+    name                 = "PublicIPAddress"
+    public_ip_address_id = azurerm_public_ip.${resourceName}_lb_ip.id
+  }
+}
+
+resource "azurerm_lb_backend_address_pool" "${resourceName}_pool" {
+  loadbalancer_id = azurerm_lb.${resourceName}_lb.id
+  name            = "${resourceName}-backend-pool"
+}
+
+resource "azurerm_lb_probe" "${resourceName}_probe" {
+  loadbalancer_id = azurerm_lb.${resourceName}_lb.id
+  name            = "http-probe"
+  port            = 80
+}
+
+resource "azurerm_lb_rule" "${resourceName}_rule" {
+  loadbalancer_id                = azurerm_lb.${resourceName}_lb.id
+  name                           = "HTTP"
+  protocol                       = "Tcp"
+  frontend_port                  = 80
+  backend_port                   = 80
+  frontend_ip_configuration_name = "PublicIPAddress"
+  backend_address_pool_ids       = [azurerm_lb_backend_address_pool.${resourceName}_pool.id]
+  probe_id                       = azurerm_lb_probe.${resourceName}_probe.id
+}
+`;
+  }
+  mapAzureVMSize(cpuName) {
+    const mappings = {
+      "r5.2xlarge": "Standard_E8s_v3",
+      "r5.large": "Standard_E2s_v3",
+      "t3.medium": "Standard_B2ms",
+      "t3.large": "Standard_B4ms"
+    };
+    return mappings[cpuName.toLowerCase()] || "Standard_B2ms";
+  }
+  // GCP Terraform Generation
+  generateGCPTerraformCode(requirements) {
+    let terraformCode = `# Generated Infrastructure as Code for GCP
+# Source: Excel Infrastructure Requirements
+# Generated: ${(/* @__PURE__ */ new Date()).toISOString()}
+
+terraform {
+  required_version = ">= 1.0"
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = "~> 5.0"
+    }
+  }
+}
+
+provider "google" {
+  project = var.project_id
+  region  = var.region
+}
+
+# Variables
+variable "project_id" {
+  description = "GCP Project ID"
+  type        = string
+}
+
+variable "region" {
+  description = "GCP region"
+  type        = string
+  default     = "asia-south1"
+}
+
+variable "environment" {
+  description = "Environment name"
+  type        = string
+  default     = "production"
+}
+
+variable "project_name" {
+  description = "Project name"
+  type        = string
+  default     = "infrastructure"
+}
+
+# VPC Network
+resource "google_compute_network" "main" {
+  name                    = "\${var.project_name}-vpc"
+  auto_create_subnetworks = false
+}
+
+# Subnets
+resource "google_compute_subnetwork" "public" {
+  name          = "\${var.project_name}-public-subnet"
+  ip_cidr_range = "10.0.1.0/24"
+  region        = var.region
+  network       = google_compute_network.main.id
+}
+
+resource "google_compute_subnetwork" "private" {
+  name          = "\${var.project_name}-private-subnet"
+  ip_cidr_range = "10.0.10.0/24"
+  region        = var.region
+  network       = google_compute_network.main.id
+}
+
+# Firewall Rules
+resource "google_compute_firewall" "web" {
+  name    = "\${var.project_name}-web-firewall"
+  network = google_compute_network.main.name
+
+  allow {
+    protocol = "tcp"
+    ports    = ["80", "443"]
+  }
+
+  source_ranges = ["0.0.0.0/0"]
+  target_tags   = ["web"]
+}
+
+resource "google_compute_firewall" "app" {
+  name    = "\${var.project_name}-app-firewall"
+  network = google_compute_network.main.name
+
+  allow {
+    protocol = "tcp"
+    ports    = ["8080"]
+  }
+
+  source_ranges = ["10.0.0.0/16"]
+  target_tags   = ["app"]
+}
+
+resource "google_compute_firewall" "db" {
+  name    = "\${var.project_name}-db-firewall"
+  network = google_compute_network.main.name
+
+  allow {
+    protocol = "tcp"
+    ports    = ["1521", "3306", "5432"]
+  }
+
+  source_ranges = ["10.0.0.0/16"]
+  target_tags   = ["database"]
+}
+
+`;
+    requirements.forEach((req, index2) => {
+      terraformCode += this.generateGCPResourceForRequirement(req, index2);
+    });
+    terraformCode += `
+# Outputs
+output "network_name" {
+  description = "Name of the VPC network"
+  value       = google_compute_network.main.name
+}
+
+output "network_id" {
+  description = "ID of the VPC network"
+  value       = google_compute_network.main.id
+}
+`;
+    return terraformCode;
+  }
+  generateGCPResourceForRequirement(req, index2) {
+    const resourceName = `${req.applicationName.toLowerCase().replace(/[^a-z0-9]/g, "_")}_${index2}`;
+    let code = "";
+    if (req.workloadType.toLowerCase().includes("db")) {
+      code += this.generateGCPDBInstance(req, resourceName);
+    } else {
+      code += this.generateGCPComputeInstance(req, resourceName);
+    }
+    if (req.loadBalanced.toLowerCase().includes("yes")) {
+      code += this.generateGCPLoadBalancer(req, resourceName);
+    }
+    return code;
+  }
+  generateGCPComputeInstance(req, resourceName) {
+    const machineType = this.mapGCPMachineType(req.cpuName);
+    return `
+# GCP Compute Instance for ${req.applicationName}
+resource "google_compute_instance" "${resourceName}" {
+  name         = "${req.applicationName.toLowerCase().replace(/[^a-z0-9-]/g, "-")}-${req.workloadType.toLowerCase()}"
+  machine_type = "${machineType}"
+  zone         = "\${var.region}-a"
+
+  tags = ${req.workloadType.toLowerCase().includes("web") ? '["web"]' : '["app"]'}
+
+  boot_disk {
+    initialize_params {
+      image = "ubuntu-os-cloud/ubuntu-2004-lts"
+      size  = ${req.bootSpaceGB || 20}
+      type  = "pd-ssd"
+    }
+  }
+
+  ${req.dataSpaceGB > 0 ? `
+  attached_disk {
+    source = google_compute_disk.${resourceName}_data.id
+    mode   = "READ_WRITE"
+  }
+  ` : ""}
+
+  network_interface {
+    subnetwork = google_compute_subnetwork.private.id
+  }
+
+  metadata = {
+    Environment = var.environment
+    Workload    = "${req.workloadType}"
+    Software    = "${req.softwares}"
+  }
+
+  metadata_startup_script = <<-EOF
+    #!/bin/bash
+    apt-get update
+    # Add your application installation scripts here
+  EOF
+}
+
+${req.dataSpaceGB > 0 ? `
+resource "google_compute_disk" "${resourceName}_data" {
+  name = "${resourceName}-data-disk"
+  type = "pd-ssd"
+  zone = "\${var.region}-a"
+  size = ${req.dataSpaceGB}
+}
+` : ""}
+`;
+  }
+  generateGCPDBInstance(req, resourceName) {
+    return `
+# GCP Cloud SQL Instance for ${req.applicationName}
+resource "google_sql_database_instance" "${resourceName}_db" {
+  name             = "${resourceName}-db"
+  database_version = "MYSQL_8_0"
+  region           = var.region
+
+  settings {
+    tier = "db-n1-standard-2"
+
+    disk_size       = ${Math.max(req.dataSpaceGB || 100, 100)}
+    disk_type       = "PD_SSD"
+    disk_autoresize = true
+
+    backup_configuration {
+      enabled            = true
+      start_time         = "03:00"
+      binary_log_enabled = true
+    }
+
+    ip_configuration {
+      ipv4_enabled    = false
+      private_network = google_compute_network.main.id
+    }
+
+    ${req.haRequired.toLowerCase().includes("yes") ? 'availability_type = "REGIONAL"' : ""}
+  }
+
+  deletion_protection = true
+}
+
+resource "google_sql_database" "${resourceName}_database" {
+  name     = "${req.applicationName.toLowerCase().replace(/[^a-z0-9_]/g, "_")}"
+  instance = google_sql_database_instance.${resourceName}_db.name
+}
+`;
+  }
+  generateGCPLoadBalancer(req, resourceName) {
+    return `
+# GCP Load Balancer for ${req.applicationName}
+resource "google_compute_global_address" "${resourceName}_lb_ip" {
+  name = "${resourceName}-lb-ip"
+}
+
+resource "google_compute_backend_service" "${resourceName}_backend" {
+  name          = "${resourceName}-backend"
+  health_checks = [google_compute_health_check.${resourceName}_health.id]
+
+  backend {
+    group = google_compute_instance_group.${resourceName}_group.id
+  }
+}
+
+resource "google_compute_health_check" "${resourceName}_health" {
+  name               = "${resourceName}-health-check"
+  check_interval_sec = 30
+  timeout_sec        = 5
+
+  http_health_check {
+    port = 80
+    request_path = "/"
+  }
+}
+
+resource "google_compute_instance_group" "${resourceName}_group" {
+  name = "${resourceName}-instance-group"
+  zone = "\${var.region}-a"
+
+  instances = [
+    google_compute_instance.${resourceName}.id
+  ]
+}
+
+resource "google_compute_url_map" "${resourceName}_url_map" {
+  name            = "${resourceName}-url-map"
+  default_service = google_compute_backend_service.${resourceName}_backend.id
+}
+
+resource "google_compute_target_http_proxy" "${resourceName}_proxy" {
+  name    = "${resourceName}-http-proxy"
+  url_map = google_compute_url_map.${resourceName}_url_map.id
+}
+
+resource "google_compute_global_forwarding_rule" "${resourceName}_forwarding" {
+  name       = "${resourceName}-forwarding-rule"
+  target     = google_compute_target_http_proxy.${resourceName}_proxy.id
+  port_range = "80"
+  ip_address = google_compute_global_address.${resourceName}_lb_ip.address
+}
+`;
+  }
+  mapGCPMachineType(cpuName) {
+    const mappings = {
+      "r5.2xlarge": "n2-highmem-8",
+      "r5.large": "n2-highmem-2",
+      "t3.medium": "n2-standard-2",
+      "t3.large": "n2-standard-4"
+    };
+    return mappings[cpuName.toLowerCase()] || "n2-standard-2";
+  }
+  // OCI Terraform Generation
+  generateOCITerraformCode(requirements) {
+    let terraformCode = `# Generated Infrastructure as Code for OCI
+# Source: Excel Infrastructure Requirements
+# Generated: ${(/* @__PURE__ */ new Date()).toISOString()}
+
+terraform {
+  required_version = ">= 1.0"
+  required_providers {
+    oci = {
+      source  = "oracle/oci"
+      version = "~> 5.0"
+    }
+  }
+}
+
+provider "oci" {
+  tenancy_ocid     = var.tenancy_ocid
+  user_ocid        = var.user_ocid
+  fingerprint      = var.fingerprint
+  private_key_path = var.private_key_path
+  region           = var.region
+}
+
+# Variables
+variable "tenancy_ocid" {
+  description = "OCI Tenancy OCID"
+  type        = string
+}
+
+variable "user_ocid" {
+  description = "OCI User OCID"
+  type        = string
+}
+
+variable "fingerprint" {
+  description = "OCI API Key Fingerprint"
+  type        = string
+}
+
+variable "private_key_path" {
+  description = "Path to OCI API private key"
+  type        = string
+}
+
+variable "region" {
+  description = "OCI region"
+  type        = string
+  default     = "ap-hyderabad-1"
+}
+
+variable "compartment_id" {
+  description = "OCI Compartment OCID"
+  type        = string
+}
+
+variable "environment" {
+  description = "Environment name"
+  type        = string
+  default     = "production"
+}
+
+variable "project_name" {
+  description = "Project name"
+  type        = string
+  default     = "infrastructure"
+}
+
+# Get availability domains
+data "oci_identity_availability_domains" "ads" {
+  compartment_id = var.tenancy_ocid
+}
+
+# VCN (Virtual Cloud Network)
+resource "oci_core_vcn" "main" {
+  compartment_id = var.compartment_id
+  cidr_blocks    = ["10.0.0.0/16"]
+  display_name   = "\${var.project_name}-vcn"
+  dns_label      = "mainvcn"
+
+  freeform_tags = {
+    Environment = var.environment
+  }
+}
+
+# Internet Gateway
+resource "oci_core_internet_gateway" "main" {
+  compartment_id = var.compartment_id
+  vcn_id         = oci_core_vcn.main.id
+  display_name   = "\${var.project_name}-igw"
+  enabled        = true
+}
+
+# Route Table
+resource "oci_core_route_table" "public" {
+  compartment_id = var.compartment_id
+  vcn_id         = oci_core_vcn.main.id
+  display_name   = "\${var.project_name}-public-rt"
+
+  route_rules {
+    network_entity_id = oci_core_internet_gateway.main.id
+    destination       = "0.0.0.0/0"
+  }
+}
+
+# Subnets
+resource "oci_core_subnet" "public" {
+  compartment_id    = var.compartment_id
+  vcn_id            = oci_core_vcn.main.id
+  cidr_block        = "10.0.1.0/24"
+  display_name      = "\${var.project_name}-public-subnet"
+  route_table_id    = oci_core_route_table.public.id
+  security_list_ids = [oci_core_security_list.public.id]
+  dns_label         = "public"
+}
+
+resource "oci_core_subnet" "private" {
+  compartment_id             = var.compartment_id
+  vcn_id                     = oci_core_vcn.main.id
+  cidr_block                 = "10.0.10.0/24"
+  display_name               = "\${var.project_name}-private-subnet"
+  prohibit_public_ip_on_vnic = true
+  security_list_ids          = [oci_core_security_list.private.id]
+  dns_label                  = "private"
+}
+
+# Security Lists
+resource "oci_core_security_list" "public" {
+  compartment_id = var.compartment_id
+  vcn_id         = oci_core_vcn.main.id
+  display_name   = "\${var.project_name}-public-sl"
+
+  ingress_security_rules {
+    protocol = "6" # TCP
+    source   = "0.0.0.0/0"
+    tcp_options {
+      min = 80
+      max = 80
+    }
+  }
+
+  ingress_security_rules {
+    protocol = "6" # TCP
+    source   = "0.0.0.0/0"
+    tcp_options {
+      min = 443
+      max = 443
+    }
+  }
+
+  egress_security_rules {
+    protocol    = "all"
+    destination = "0.0.0.0/0"
+  }
+}
+
+resource "oci_core_security_list" "private" {
+  compartment_id = var.compartment_id
+  vcn_id         = oci_core_vcn.main.id
+  display_name   = "\${var.project_name}-private-sl"
+
+  ingress_security_rules {
+    protocol = "6" # TCP
+    source   = "10.0.0.0/16"
+  }
+
+  egress_security_rules {
+    protocol    = "all"
+    destination = "0.0.0.0/0"
+  }
+}
+
+`;
+    requirements.forEach((req, index2) => {
+      terraformCode += this.generateOCIResourceForRequirement(req, index2);
+    });
+    terraformCode += `
+# Outputs
+output "vcn_id" {
+  description = "ID of the VCN"
+  value       = oci_core_vcn.main.id
+}
+
+output "public_subnet_id" {
+  description = "ID of the public subnet"
+  value       = oci_core_subnet.public.id
+}
+
+output "private_subnet_id" {
+  description = "ID of the private subnet"
+  value       = oci_core_subnet.private.id
+}
+`;
+    return terraformCode;
+  }
+  generateOCIResourceForRequirement(req, index2) {
+    const resourceName = `${req.applicationName.toLowerCase().replace(/[^a-z0-9]/g, "_")}_${index2}`;
+    let code = "";
+    if (req.workloadType.toLowerCase().includes("db")) {
+      code += this.generateOCIDBInstance(req, resourceName);
+    } else {
+      code += this.generateOCIComputeInstance(req, resourceName);
+    }
+    if (req.loadBalanced.toLowerCase().includes("yes")) {
+      code += this.generateOCILoadBalancer(req, resourceName);
+    }
+    return code;
+  }
+  generateOCIComputeInstance(req, resourceName) {
+    const shape = this.mapOCIShape(req.cpuName);
+    return `
+# OCI Compute Instance for ${req.applicationName}
+data "oci_core_images" "oracle_linux" {
+  compartment_id           = var.compartment_id
+  operating_system         = "Oracle Linux"
+  operating_system_version = "8"
+  shape                    = "${shape}"
+  sort_by                  = "TIMECREATED"
+  sort_order               = "DESC"
+}
+
+resource "oci_core_instance" "${resourceName}" {
+  compartment_id      = var.compartment_id
+  availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name
+  display_name        = "${req.applicationName}-${req.workloadType}"
+  shape               = "${shape}"
+
+  ${shape.startsWith("VM.Standard.E") ? `
+  shape_config {
+    memory_in_gbs = ${req.ramGB || 8}
+    ocpus         = ${req.physicalCores || 2}
+  }
+  ` : ""}
+
+  create_vnic_details {
+    subnet_id        = oci_core_subnet.private.id
+    assign_public_ip = false
+  }
+
+  source_details {
+    source_type = "image"
+    source_id   = data.oci_core_images.oracle_linux.images[0].id
+    boot_volume_size_in_gbs = ${req.bootSpaceGB || 50}
+  }
+
+  metadata = {
+    user_data = base64encode(<<-EOF
+      #!/bin/bash
+      yum update -y
+      # Add your application installation scripts here
+    EOF
+    )
+  }
+
+  freeform_tags = {
+    Environment = var.environment
+    Workload    = "${req.workloadType}"
+    Software    = "${req.softwares}"
+  }
+}
+
+${req.dataSpaceGB > 0 ? `
+resource "oci_core_volume" "${resourceName}_data" {
+  compartment_id      = var.compartment_id
+  availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name
+  display_name        = "${resourceName}-data-volume"
+  size_in_gbs         = ${req.dataSpaceGB}
+}
+
+resource "oci_core_volume_attachment" "${resourceName}_data_attach" {
+  attachment_type = "iscsi"
+  instance_id     = oci_core_instance.${resourceName}.id
+  volume_id       = oci_core_volume.${resourceName}_data.id
+}
+` : ""}
+`;
+  }
+  generateOCIDBInstance(req, resourceName) {
+    return `
+# OCI Database System for ${req.applicationName}
+resource "oci_database_db_system" "${resourceName}_db" {
+  compartment_id      = var.compartment_id
+  availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name
+  database_edition    = "ENTERPRISE_EDITION"
+
+  db_home {
+    database {
+      admin_password = "Change_Me_In_Production_123"
+      db_name        = "${req.applicationName.toLowerCase().replace(/[^a-z0-9]/g, "").substring(0, 8)}"
+      pdb_name       = "PDB1"
+    }
+    db_version   = "19.0.0.0"
+    display_name = "${req.applicationName}-dbhome"
+  }
+
+  shape                   = "VM.Standard2.2"
+  subnet_id              = oci_core_subnet.private.id
+  ssh_public_keys        = [file("~/.ssh/id_rsa.pub")]
+  display_name           = "${req.applicationName}-database"
+  hostname               = "${resourceName}db"
+  data_storage_size_in_gb = ${Math.max(req.dataSpaceGB || 256, 256)}
+  license_model          = "BRING_YOUR_OWN_LICENSE"
+  node_count             = ${req.haRequired.toLowerCase().includes("yes") ? "2" : "1"}
+
+  freeform_tags = {
+    Environment = var.environment
+    Workload    = "Database"
+  }
+}
+`;
+  }
+  generateOCILoadBalancer(req, resourceName) {
+    return `
+# OCI Load Balancer for ${req.applicationName}
+resource "oci_load_balancer_load_balancer" "${resourceName}_lb" {
+  compartment_id = var.compartment_id
+  display_name   = "${resourceName}-lb"
+  shape          = "flexible"
+
+  shape_details {
+    minimum_bandwidth_in_mbps = 10
+    maximum_bandwidth_in_mbps = 100
+  }
+
+  subnet_ids = [
+    oci_core_subnet.public.id
+  ]
+
+  is_private = false
+
+  freeform_tags = {
+    Environment = var.environment
+  }
+}
+
+resource "oci_load_balancer_backend_set" "${resourceName}_backend_set" {
+  load_balancer_id = oci_load_balancer_load_balancer.${resourceName}_lb.id
+  name             = "${resourceName}-backend-set"
+  policy           = "ROUND_ROBIN"
+
+  health_checker {
+    protocol = "HTTP"
+    port     = 80
+    url_path = "/"
+  }
+}
+
+resource "oci_load_balancer_backend" "${resourceName}_backend" {
+  load_balancer_id = oci_load_balancer_load_balancer.${resourceName}_lb.id
+  backendset_name  = oci_load_balancer_backend_set.${resourceName}_backend_set.name
+  ip_address       = oci_core_instance.${resourceName}.private_ip
+  port             = 80
+  backup           = false
+  drain            = false
+  offline          = false
+  weight           = 1
+}
+
+resource "oci_load_balancer_listener" "${resourceName}_listener" {
+  load_balancer_id         = oci_load_balancer_load_balancer.${resourceName}_lb.id
+  name                     = "${resourceName}-listener"
+  default_backend_set_name = oci_load_balancer_backend_set.${resourceName}_backend_set.name
+  port                     = 80
+  protocol                 = "HTTP"
+}
+`;
+  }
+  mapOCIShape(cpuName) {
+    const mappings = {
+      "r5.2xlarge": "VM.Standard.E4.Flex",
+      "r5.large": "VM.Standard.E4.Flex",
+      "t3.medium": "VM.Standard.E2.2",
+      "t3.large": "VM.Standard.E2.4"
+    };
+    return mappings[cpuName.toLowerCase()] || "VM.Standard.E2.2";
+  }
+  // Multi-Cloud Cost Estimation
+  generateMultiCloudCostEstimate(requirements) {
+    return {
+      aws: {
+        estimates: this.generateAWSCostEstimate(requirements),
+        totalMonthly: this.generateAWSCostEstimate(requirements).reduce((sum, e) => sum + e.monthlyEstimate, 0),
+        totalYearly: this.generateAWSCostEstimate(requirements).reduce((sum, e) => sum + e.yearlyEstimate, 0)
+      },
+      azure: {
+        estimates: this.generateAzureCostEstimate(requirements),
+        totalMonthly: this.generateAzureCostEstimate(requirements).reduce((sum, e) => sum + e.monthlyEstimate, 0),
+        totalYearly: this.generateAzureCostEstimate(requirements).reduce((sum, e) => sum + e.yearlyEstimate, 0)
+      },
+      gcp: {
+        estimates: this.generateGCPCostEstimate(requirements),
+        totalMonthly: this.generateGCPCostEstimate(requirements).reduce((sum, e) => sum + e.monthlyEstimate, 0),
+        totalYearly: this.generateGCPCostEstimate(requirements).reduce((sum, e) => sum + e.yearlyEstimate, 0)
+      },
+      oci: {
+        estimates: this.generateOCICostEstimate(requirements),
+        totalMonthly: this.generateOCICostEstimate(requirements).reduce((sum, e) => sum + e.monthlyEstimate, 0),
+        totalYearly: this.generateOCICostEstimate(requirements).reduce((sum, e) => sum + e.yearlyEstimate, 0)
+      }
+    };
+  }
+  generateAWSCostEstimate(requirements) {
+    return this.generateCostEstimate(requirements);
+  }
+  generateAzureCostEstimate(requirements) {
+    const estimates = [];
+    requirements.forEach((req, index2) => {
+      if (req.workloadType.toLowerCase().includes("db")) {
+        const monthlyCost = this.estimateAzureDBCost(req.dataSpaceGB || 100);
+        estimates.push({
+          resourceName: `${req.applicationName}-DB`,
+          service: "Azure SQL Database",
+          region: "Central India",
+          monthlyEstimate: monthlyCost,
+          yearlyEstimate: monthlyCost * 12,
+          configuration: `S1 tier, Storage: ${req.dataSpaceGB}GB`
+        });
+      } else {
+        const vmSize = this.mapAzureVMSize(req.cpuName);
+        const monthlyCost = this.estimateAzureVMCost(vmSize);
+        estimates.push({
+          resourceName: `${req.applicationName}-${req.workloadType}`,
+          service: "Azure Virtual Machine",
+          region: "Central India",
+          monthlyEstimate: monthlyCost,
+          yearlyEstimate: monthlyCost * 12,
+          configuration: `VM Size: ${vmSize}, OS: Linux, Storage: ${req.bootSpaceGB}GB`
+        });
+      }
+      if (req.dataSpaceGB > 0) {
+        const diskCost = req.dataSpaceGB * 0.125;
+        estimates.push({
+          resourceName: `${req.applicationName}-DataDisk`,
+          service: "Azure Managed Disk",
+          region: "Central India",
+          monthlyEstimate: diskCost,
+          yearlyEstimate: diskCost * 12,
+          configuration: `Premium SSD: ${req.dataSpaceGB}GB`
+        });
+      }
+      if (req.loadBalanced.toLowerCase().includes("yes")) {
+        const lbCost = 25;
+        estimates.push({
+          resourceName: `${req.applicationName}-LB`,
+          service: "Azure Load Balancer",
+          region: "Central India",
+          monthlyEstimate: lbCost,
+          yearlyEstimate: lbCost * 12,
+          configuration: "Standard Load Balancer"
+        });
+      }
+    });
+    return estimates;
+  }
+  generateGCPCostEstimate(requirements) {
+    const estimates = [];
+    requirements.forEach((req, index2) => {
+      if (req.workloadType.toLowerCase().includes("db")) {
+        const monthlyCost = this.estimateGCPDBCost(req.dataSpaceGB || 100);
+        estimates.push({
+          resourceName: `${req.applicationName}-DB`,
+          service: "Cloud SQL",
+          region: "asia-south1 (Mumbai)",
+          monthlyEstimate: monthlyCost,
+          yearlyEstimate: monthlyCost * 12,
+          configuration: `db-n1-standard-2, Storage: ${req.dataSpaceGB}GB`
+        });
+      } else {
+        const machineType = this.mapGCPMachineType(req.cpuName);
+        const monthlyCost = this.estimateGCPComputeCost(machineType);
+        estimates.push({
+          resourceName: `${req.applicationName}-${req.workloadType}`,
+          service: "Compute Engine",
+          region: "asia-south1 (Mumbai)",
+          monthlyEstimate: monthlyCost,
+          yearlyEstimate: monthlyCost * 12,
+          configuration: `Machine: ${machineType}, OS: Linux, Storage: ${req.bootSpaceGB}GB`
+        });
+      }
+      if (req.dataSpaceGB > 0) {
+        const diskCost = req.dataSpaceGB * 0.187;
+        estimates.push({
+          resourceName: `${req.applicationName}-DataDisk`,
+          service: "Persistent Disk",
+          region: "asia-south1 (Mumbai)",
+          monthlyEstimate: diskCost,
+          yearlyEstimate: diskCost * 12,
+          configuration: `SSD: ${req.dataSpaceGB}GB`
+        });
+      }
+      if (req.loadBalanced.toLowerCase().includes("yes")) {
+        const lbCost = 22;
+        estimates.push({
+          resourceName: `${req.applicationName}-LB`,
+          service: "Cloud Load Balancer",
+          region: "asia-south1 (Mumbai)",
+          monthlyEstimate: lbCost,
+          yearlyEstimate: lbCost * 12,
+          configuration: "HTTP(S) Load Balancer"
+        });
+      }
+    });
+    return estimates;
+  }
+  generateOCICostEstimate(requirements) {
+    const estimates = [];
+    requirements.forEach((req, index2) => {
+      if (req.workloadType.toLowerCase().includes("db")) {
+        const monthlyCost = this.estimateOCIDBCost(req.dataSpaceGB || 256);
+        estimates.push({
+          resourceName: `${req.applicationName}-DB`,
+          service: "OCI Database",
+          region: "Hyderabad",
+          monthlyEstimate: monthlyCost,
+          yearlyEstimate: monthlyCost * 12,
+          configuration: `VM.Standard2.2, Storage: ${req.dataSpaceGB}GB`
+        });
+      } else {
+        const shape = this.mapOCIShape(req.cpuName);
+        const monthlyCost = this.estimateOCIComputeCost(shape, req.physicalCores || 2, req.ramGB || 8);
+        estimates.push({
+          resourceName: `${req.applicationName}-${req.workloadType}`,
+          service: "OCI Compute",
+          region: "Hyderabad",
+          monthlyEstimate: monthlyCost,
+          yearlyEstimate: monthlyCost * 12,
+          configuration: `Shape: ${shape}, RAM: ${req.ramGB}GB, Storage: ${req.bootSpaceGB}GB`
+        });
+      }
+      if (req.dataSpaceGB > 0) {
+        const diskCost = req.dataSpaceGB * 0.085;
+        estimates.push({
+          resourceName: `${req.applicationName}-DataVolume`,
+          service: "OCI Block Volume",
+          region: "Hyderabad",
+          monthlyEstimate: diskCost,
+          yearlyEstimate: diskCost * 12,
+          configuration: `Block Storage: ${req.dataSpaceGB}GB`
+        });
+      }
+      if (req.loadBalanced.toLowerCase().includes("yes")) {
+        const lbCost = 20;
+        estimates.push({
+          resourceName: `${req.applicationName}-LB`,
+          service: "OCI Load Balancer",
+          region: "Hyderabad",
+          monthlyEstimate: lbCost,
+          yearlyEstimate: lbCost * 12,
+          configuration: "Flexible Load Balancer"
+        });
+      }
+    });
+    return estimates;
+  }
+  estimateAzureVMCost(vmSize) {
+    const pricing = {
+      "Standard_B2ms": 60.74,
+      // per month
+      "Standard_B4ms": 121.47,
+      // per month
+      "Standard_E2s_v3": 122.63,
+      // per month
+      "Standard_E8s_v3": 490.51
+      // per month
+    };
+    return pricing[vmSize] || pricing["Standard_B2ms"];
+  }
+  estimateAzureDBCost(storageGB) {
+    const baseCost = 30;
+    const storageCost = storageGB * 0.125;
+    return baseCost + storageCost;
+  }
+  estimateGCPComputeCost(machineType) {
+    const pricing = {
+      "n2-standard-2": 70.08,
+      // per month
+      "n2-standard-4": 140.16,
+      // per month
+      "n2-highmem-2": 94.9,
+      // per month
+      "n2-highmem-8": 379.58
+      // per month
+    };
+    return pricing[machineType] || pricing["n2-standard-2"];
+  }
+  estimateGCPDBCost(storageGB) {
+    const baseCost = 150;
+    const storageCost = storageGB * 0.187;
+    return baseCost + storageCost;
+  }
+  estimateOCIComputeCost(shape, ocpus, ramGB) {
+    if (shape.includes("Flex")) {
+      const ocpuCost = ocpus * 36.5;
+      const ramCost = ramGB * 4.56;
+      return ocpuCost + ramCost;
+    }
+    const pricing = {
+      "VM.Standard.E2.2": 85.41,
+      // per month
+      "VM.Standard.E2.4": 170.82
+      // per month
+    };
+    return pricing[shape] || pricing["VM.Standard.E2.2"];
+  }
+  estimateOCIDBCost(storageGB) {
+    const baseCost = 350;
+    const storageCost = storageGB * 0.085;
+    return baseCost + storageCost;
   }
 };
 
@@ -5055,7 +6382,8 @@ function getSession() {
   return session({
     secret: process.env.SESSION_SECRET,
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
+    // Changed from true
     store: new PgSession({
       conString: process.env.DATABASE_URL,
       tableName: "sessions"
@@ -5063,10 +6391,10 @@ function getSession() {
     cookie: {
       httpOnly: true,
       secure: false,
-      // Set to false for local development
+      // true in production
       maxAge: sessionTtl,
       sameSite: "lax"
-      // Set to lax for local development
+      // CRITICAL: Changed from 'lax' to 'none' for cross-origin
     }
   });
 }
@@ -6496,10 +7824,12 @@ async function registerRoutes(app2) {
       console.log("\u{1F4CA} Excel to IaC: Processing file:", req.file.originalname);
       const requirements = await excelToIaCService.parseExcelFile(req.file.buffer);
       console.log(`\u{1F4CA} Parsed ${requirements.length} infrastructure requirements`);
+      const multiCloudCosts = excelToIaCService.generateMultiCloudCostEstimate(requirements);
       const costEstimates = excelToIaCService.generateCostEstimate(requirements);
       const sessionData = {
         requirements,
         costEstimates,
+        multiCloudCosts,
         uploadedAt: (/* @__PURE__ */ new Date()).toISOString(),
         fileName: req.file.originalname
       };
@@ -6514,8 +7844,10 @@ async function registerRoutes(app2) {
         },
         requirements: requirements.slice(0, 5),
         // Preview first 5
-        costEstimates: costEstimates.slice(0, 5)
+        costEstimates: costEstimates.slice(0, 5),
         // Preview first 5
+        multiCloudCosts
+        // Include full multi-cloud costs
       });
     } catch (error) {
       console.error("Excel to IaC upload error:", error);
@@ -6531,12 +7863,36 @@ async function registerRoutes(app2) {
       if (!iacData || !iacData.requirements) {
         return res.status(400).json({ message: "No Excel data found. Please upload an Excel file first." });
       }
+      const { provider } = req.body;
       console.log("\u{1F3D7}\uFE0F Generating Terraform code for", iacData.requirements.length, "resources");
-      const terraformCode = excelToIaCService.generateTerraformCode(iacData.requirements);
-      const fileName = `infrastructure-${Date.now()}.tf`;
-      res.setHeader("Content-Type", "application/octet-stream");
-      res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
-      res.send(terraformCode);
+      if (provider && ["aws", "azure", "gcp", "oci"].includes(provider)) {
+        let terraformCode;
+        switch (provider) {
+          case "aws":
+            terraformCode = excelToIaCService.generateTerraformCode(iacData.requirements);
+            break;
+          case "azure":
+            terraformCode = excelToIaCService.generateAzureTerraformCode(iacData.requirements);
+            break;
+          case "gcp":
+            terraformCode = excelToIaCService.generateGCPTerraformCode(iacData.requirements);
+            break;
+          case "oci":
+            terraformCode = excelToIaCService.generateOCITerraformCode(iacData.requirements);
+            break;
+          default:
+            terraformCode = excelToIaCService.generateTerraformCode(iacData.requirements);
+        }
+        const fileName = `infrastructure-${provider}-${Date.now()}.tf`;
+        res.setHeader("Content-Type", "application/octet-stream");
+        res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+        return res.send(terraformCode);
+      }
+      const multiCloudTerraform = excelToIaCService.generateMultiCloudTerraform(iacData.requirements);
+      res.json({
+        success: true,
+        terraform: multiCloudTerraform
+      });
     } catch (error) {
       console.error("Terraform generation error:", error);
       res.status(500).json({
@@ -6548,11 +7904,20 @@ async function registerRoutes(app2) {
   app2.post("/api/excel-to-iac/generate-csv", isAuthenticated, async (req, res) => {
     try {
       const iacData = req.session.iacData;
-      if (!iacData || !iacData.costEstimates) {
+      if (!iacData || !iacData.requirements) {
         return res.status(400).json({ message: "No cost estimate data found. Please upload an Excel file first." });
       }
-      console.log("\u{1F4B0} Generating cost estimate CSV for", iacData.costEstimates.length, "resources");
-      const csvContent = excelToIaCService.generateCSV(iacData.costEstimates);
+      const { provider } = req.body;
+      console.log("\u{1F4B0} Generating cost estimate CSV for", iacData.requirements.length, "resources");
+      if (provider && ["aws", "azure", "gcp", "oci", "combined"].includes(provider)) {
+        const multiCloudCSVs = excelToIaCService.generateMultiCloudCSV(iacData.requirements);
+        const csvContent2 = multiCloudCSVs[provider];
+        const fileName2 = `cost-estimate-${provider}-${Date.now()}.csv`;
+        res.setHeader("Content-Type", "text/csv");
+        res.setHeader("Content-Disposition", `attachment; filename="${fileName2}"`);
+        return res.send(csvContent2);
+      }
+      const csvContent = excelToIaCService.generateCSV(iacData.costEstimates || [], "AWS");
       const fileName = `cost-estimate-${Date.now()}.csv`;
       res.setHeader("Content-Type", "text/csv");
       res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
@@ -6772,12 +8137,24 @@ function serveStatic(app2) {
 
 // server/index.ts
 var app = express2();
+var allowedOrigins = [
+  "http://34.14.198.14:3000",
+  "https://app.cloudedze.ai",
+  "http://localhost:3000"
+];
 app.use(cors({
-  origin: true,
-  // Allow all origins in development
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, true);
+    }
+  },
   credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept", "Authorization", "Cache-Control"]
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+  maxAge: 86400
 }));
 app.use(express2.json({ limit: "50mb" }));
 app.use(express2.urlencoded({ extended: false, limit: "50mb" }));

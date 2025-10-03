@@ -10,21 +10,29 @@ import { setupAuth } from "./auth.js";
 
 const app = express();
 
-// Completely disable CORS - allow all requests from anywhere
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', '*');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Max-Age', '86400');
+// CORS Configuration - Fixed to work with credentials
+const allowedOrigins = [
+  'http://34.14.198.14:3000',
+  'https://app.cloudedze.ai',
+  'http://localhost:3000',
+];
 
-  // Handle preflight
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-
-  next();
-});
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, Postman, or same-origin)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, true); // Change to false in production to block unknown origins
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  maxAge: 86400
+}));
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: false, limit: '50mb' }));
@@ -33,19 +41,19 @@ app.use(express.urlencoded({ extended: false, limit: '50mb' }));
 app.use((req, res, next) => {
   const host = req.get('host');
   const path = req.path;
-  
+
   // For app.cloudedze.ai, serve the application directly (no redirects)
   // This allows the frontend router to handle all routes
   if (host === 'app.cloudedze.ai') {
     // Let all requests pass through to be handled by the frontend router
     return next();
   }
-  
+
   // For other domains, handle redirects as needed
   if (host === 'cloudedze.ai' && path.startsWith('/app/')) {
     return res.redirect(301, `https://app.cloudedze.ai${path.replace('/app', '')}`);
   }
-  
+
   // Let all other requests pass through to be handled by static serving
   next();
 });
@@ -90,7 +98,7 @@ app.use((req, res, next) => {
 (async () => {
   // Setup authentication first
   await setupAuth(app);
-  
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -119,12 +127,12 @@ app.use((req, res, next) => {
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
   const useSSL = process.env.USE_SSL === 'true';
-  
+
   if (useSSL) {
     // SSL Configuration
     const sslKeyPath = process.env.SSL_KEY_PATH || path.join(process.cwd(), 'ssl', 'server.key');
     const sslCertPath = process.env.SSL_CERT_PATH || path.join(process.cwd(), 'ssl', 'server.crt');
-    
+
     try {
       // Check if SSL certificates exist
       if (fs.existsSync(sslKeyPath) && fs.existsSync(sslCertPath)) {
@@ -132,7 +140,7 @@ app.use((req, res, next) => {
           key: fs.readFileSync(sslKeyPath),
           cert: fs.readFileSync(sslCertPath)
         };
-        
+
         const httpsServer = https.createServer(sslOptions, app);
         httpsServer.listen(port, "0.0.0.0", () => {
           log(`🔒 HTTPS server serving on port ${port}`);

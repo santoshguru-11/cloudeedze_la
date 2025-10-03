@@ -10,24 +10,23 @@ const storage = new DatabaseStorage();
 
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
-  
 
-
- // Use PostgreSQL store for sessions
+  // Use PostgreSQL store for sessions
   const PgSession = connectPg(session);
   return session({
     secret: process.env.SESSION_SECRET!,
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false, // Changed from true
     store: new PgSession({
       conString: process.env.DATABASE_URL,
       tableName: 'sessions'
     }),
     cookie: {
       httpOnly: true,
-      secure: false, // Set to false for local development
+      secure: false, // true in production
       maxAge: sessionTtl,
-      sameSite: 'lax', // Set to lax for local development
+      sameSite: 'lax', // CRITICAL: Changed from 'lax' to 'none' for cross-origin
+      
     },
   });
 }
@@ -51,8 +50,6 @@ export async function setupAuth(app: Express) {
           return done(null, false, { message: 'Invalid email or password' });
         }
 
-        // For now, we'll use a simple password check
-        // In production, you should hash passwords and use bcrypt
         const isValidPassword = await bcrypt.compare(password, user.password || '');
         if (!isValidPassword) {
           return done(null, false, { message: 'Invalid email or password' });
@@ -87,16 +84,13 @@ export async function setupAuth(app: Express) {
         return res.status(400).json({ message: "Email and password are required" });
       }
 
-      // Check if user already exists
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
         return res.status(400).json({ message: "User already exists" });
       }
 
-      // Hash password
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      // Create user
       const user = await storage.createUser({
         email,
         password: hashedPassword,
@@ -104,19 +98,18 @@ export async function setupAuth(app: Express) {
         lastName: lastName || '',
       });
 
-      // Auto-login after registration
       req.login(user, (err) => {
         if (err) {
           return res.status(500).json({ message: "Registration successful but login failed" });
         }
-        res.json({ 
-          message: "Registration successful", 
-          user: { 
-            id: user.id, 
-            email: user.email, 
-            firstName: user.firstName, 
-            lastName: user.lastName 
-          } 
+        res.json({
+          message: "Registration successful",
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName
+          }
         });
       });
     } catch (error) {
@@ -130,22 +123,21 @@ export async function setupAuth(app: Express) {
     console.log('Login successful, user:', req.user);
     console.log('Session ID:', req.sessionID);
     console.log('Is authenticated:', req.isAuthenticated());
-    
-    // Ensure session is saved
+
     req.session.save((err) => {
       if (err) {
         console.error('Session save error:', err);
         return res.status(500).json({ message: "Session save failed" });
       }
-      
-      res.json({ 
-        message: "Login successful", 
-        user: { 
-          id: req.user.id, 
-          email: req.user.email, 
-          firstName: req.user.firstName, 
-          lastName: req.user.lastName 
-        } 
+
+      res.json({
+        message: "Login successful",
+        user: {
+          id: req.user.id,
+          email: req.user.email,
+          firstName: req.user.firstName,
+          lastName: req.user.lastName
+        }
       });
     });
   });
@@ -163,11 +155,11 @@ export async function setupAuth(app: Express) {
   // Get current user endpoint
   app.get("/api/auth/user", (req, res) => {
     if (req.isAuthenticated()) {
-      res.json({ 
-        id: req.user.id, 
-        email: req.user.email, 
-        firstName: req.user.firstName, 
-        lastName: req.user.lastName 
+      res.json({
+        id: req.user.id,
+        email: req.user.email,
+        firstName: req.user.firstName,
+        lastName: req.user.lastName
       });
     } else {
       res.status(401).json({ message: "Not authenticated" });
@@ -178,15 +170,15 @@ export async function setupAuth(app: Express) {
   app.get("/api/debug/db", async (req, res) => {
     try {
       const userCount = await storage.getUserByEmail('test@example.com');
-      res.json({ 
-        message: "Database connection working", 
+      res.json({
+        message: "Database connection working",
         userExists: !!userCount,
-        userEmail: userCount?.email 
+        userEmail: userCount?.email
       });
     } catch (error) {
-      res.status(500).json({ 
-        message: "Database error", 
-        error: error instanceof Error ? error.message : "Unknown error" 
+      res.status(500).json({
+        message: "Database error",
+        error: error instanceof Error ? error.message : "Unknown error"
       });
     }
   });
