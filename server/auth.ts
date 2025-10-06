@@ -21,13 +21,13 @@ export function getSession() {
       conString: process.env.DATABASE_URL,
       tableName: 'sessions'
     }),
-    cookie: {
-      httpOnly: true,
-      secure: false, // true in production
-      maxAge: sessionTtl,
-      sameSite: 'lax', // CRITICAL: Changed from 'lax' to 'none' for cross-origin
-      
-    },
+  cookie: {
+  httpOnly: true,
+  secure: true,  // Back to true since you have HTTPS
+  maxAge: sessionTtl,
+  sameSite: 'lax',  // Change from 'none' to 'lax'
+  domain: undefined,  // Remove domain setting
+},
   });
 }
 

@@ -6390,11 +6390,13 @@ function getSession() {
     }),
     cookie: {
       httpOnly: true,
-      secure: false,
-      // true in production
+      secure: true,
+      // Back to true since you have HTTPS
       maxAge: sessionTtl,
-      sameSite: "lax"
-      // CRITICAL: Changed from 'lax' to 'none' for cross-origin
+      sameSite: "lax",
+      // Change from 'none' to 'lax'
+      domain: void 0
+      // Remove domain setting
     }
   });
 }
@@ -8140,7 +8142,8 @@ var app = express2();
 var allowedOrigins = [
   "http://34.14.198.14:3000",
   "https://app.cloudedze.ai",
-  "http://localhost:3000"
+  "http://localhost:3000",
+  "http://34.14.198.14:3002"
 ];
 app.use(cors({
   origin: (origin, callback) => {

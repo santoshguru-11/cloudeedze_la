@@ -15,6 +15,7 @@ const allowedOrigins = [
   'http://34.14.198.14:3000',
   'https://app.cloudedze.ai',
   'http://localhost:3000',
+  'http://34.14.198.14:3002',
 ];
 
 app.use(cors({
