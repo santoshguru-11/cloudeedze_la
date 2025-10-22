@@ -6380,10 +6380,12 @@ function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1e3;
   const PgSession = connectPg(session);
   return session({
+    name: "cloudedze.sid",
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    // Changed from true
+    proxy: true,
+    // ADDED: Trust nginx proxy
     store: new PgSession({
       conString: process.env.DATABASE_URL,
       tableName: "sessions"
@@ -6391,12 +6393,8 @@ function getSession() {
     cookie: {
       httpOnly: true,
       secure: true,
-      // Back to true since you have HTTPS
       maxAge: sessionTtl,
-      sameSite: "lax",
-      // Change from 'none' to 'lax'
-      domain: void 0
-      // Remove domain setting
+      sameSite: "lax"
     }
   });
 }
@@ -6502,6 +6500,10 @@ async function setupAuth(app2) {
     });
   });
   app2.get("/api/auth/user", (req, res) => {
+    console.log("Auth check - Session ID:", req.sessionID);
+    console.log("Auth check - Is authenticated:", req.isAuthenticated());
+    console.log("Auth check - User:", req.user);
+    console.log("Auth check - Cookie:", req.headers.cookie);
     if (req.isAuthenticated()) {
       res.json({
         id: req.user.id,
