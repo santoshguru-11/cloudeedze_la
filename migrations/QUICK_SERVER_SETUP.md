@@ -112,13 +112,18 @@ Schema Verification Summary
 
 ## 🆘 Quick Troubleshooting
 
-### Problem: "database does not exist"
+### Problem: "database does not exist" OR "permission denied to create extension"
 ```bash
-# Create the database first
+# Create the database, user, and pgcrypto extension (as superuser)
 sudo -u postgres psql << EOF
 CREATE USER cloud_cost_user WITH PASSWORD '1101';
 CREATE DATABASE cloud_cost_optimizer OWNER cloud_cost_user;
 GRANT ALL PRIVILEGES ON DATABASE cloud_cost_optimizer TO cloud_cost_user;
+
+-- Connect to the database and create pgcrypto extension
+\c cloud_cost_optimizer
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+GRANT USAGE ON SCHEMA public TO cloud_cost_user;
 EOF
 
 # Then run init mode (not update)
