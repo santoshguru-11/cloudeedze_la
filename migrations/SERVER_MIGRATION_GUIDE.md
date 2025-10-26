@@ -235,6 +235,25 @@ pm2 restart all  # or your restart command
 
 ## Troubleshooting
 
+### Issue: Database Does Not Exist
+
+**Error:** `psql: FATAL: database "cloud_cost_optimizer" does not exist`
+
+**Solution:**
+```bash
+# Create the database first
+sudo -u postgres psql << EOF
+CREATE USER cloud_cost_user WITH PASSWORD '1101';
+CREATE DATABASE cloud_cost_optimizer OWNER cloud_cost_user;
+GRANT ALL PRIVILEGES ON DATABASE cloud_cost_optimizer TO cloud_cost_user;
+EOF
+
+# Then run init mode (not update)
+export DATABASE_URL='postgresql://cloud_cost_user:1101@localhost/cloud_cost_optimizer'
+cd migrations
+./run_migrations.sh init
+```
+
 ### Issue: Permission Denied on run_migrations.sh
 
 **Solution:**

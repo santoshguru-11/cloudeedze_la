@@ -112,6 +112,20 @@ Schema Verification Summary
 
 ## 🆘 Quick Troubleshooting
 
+### Problem: "database does not exist"
+```bash
+# Create the database first
+sudo -u postgres psql << EOF
+CREATE USER cloud_cost_user WITH PASSWORD '1101';
+CREATE DATABASE cloud_cost_optimizer OWNER cloud_cost_user;
+GRANT ALL PRIVILEGES ON DATABASE cloud_cost_optimizer TO cloud_cost_user;
+EOF
+
+# Then run init mode (not update)
+export DATABASE_URL='postgresql://cloud_cost_user:1101@localhost/cloud_cost_optimizer'
+./run_migrations.sh init
+```
+
 ### Problem: "Permission denied: run_migrations.sh"
 ```bash
 chmod +x migrations/run_migrations.sh
