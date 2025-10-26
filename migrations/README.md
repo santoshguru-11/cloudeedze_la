@@ -232,6 +232,32 @@ If you encounter issues:
 3. Review the SQL files for manual troubleshooting
 4. Check PostgreSQL logs for detailed error information
 
+## Creating Admin User
+
+After setting up the database, create an admin user:
+
+```bash
+# Run the admin user creation script
+psql "$DATABASE_URL" -f create_admin_user.sql
+```
+
+**Default Admin Credentials:**
+- Email: `admin@cloudeedze.com`
+- Password: `Admin@123`
+
+**⚠️ IMPORTANT:** Change the admin password immediately after first login!
+
+### Generate Custom Admin Password
+
+To create a different password:
+
+```bash
+# Generate hash for your custom password
+node generate_admin_hash.js "YourPassword123"
+
+# Then edit create_admin_user.sql and replace the hash
+```
+
 ## Migration History
 
 | Date | Migration | Description |
@@ -240,3 +266,5 @@ If you encounter issues:
 | 2025-10-26 | 000_init_schema.sql | Complete schema initialization |
 | 2025-10-26 | 002_update_existing_schema.sql | Update existing databases |
 | 2025-10-26 | verify_schema.sql | Schema verification tool |
+| 2025-10-26 | create_admin_user.sql | Create default admin user |
+| 2025-10-26 | generate_admin_hash.js | Generate bcrypt password hash |

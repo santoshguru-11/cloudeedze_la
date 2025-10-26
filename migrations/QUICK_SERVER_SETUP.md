@@ -23,12 +23,20 @@ export DATABASE_URL='postgresql://cloud_cost_user:1101@localhost/cloud_cost_opti
 chmod +x run_migrations.sh
 ./run_migrations.sh all
 
-# 5. Restart app
+# 5. Create admin user
+psql "$DATABASE_URL" -f create_admin_user.sql
+
+# 6. Restart app
 cd ..
 pm2 restart all
 ```
 
 **Done!** ✅
+
+**Admin Login:**
+- Email: `admin@cloudeedze.com`
+- Password: `Admin@123`
+- ⚠️ Change password after first login!
 
 ---
 
@@ -67,12 +75,12 @@ PM2_APP_NAME="cloudeedze"             # or your app name in PM2
 **Run this from your local computer** (replace SERVER details):
 
 ```bash
-ssh username@server-ip "cd ~/cloudeedze_la && git pull && export DATABASE_URL='postgresql://cloud_cost_user:1101@localhost/cloud_cost_optimizer' && cd migrations && chmod +x run_migrations.sh && ./run_migrations.sh all && pm2 restart all"
+ssh username@server-ip "cd ~/cloudeedze_la && git pull && export DATABASE_URL='postgresql://cloud_cost_user:1101@localhost/cloud_cost_optimizer' && cd migrations && chmod +x run_migrations.sh && ./run_migrations.sh all && psql \"\$DATABASE_URL\" -f create_admin_user.sql && pm2 restart all"
 ```
 
 Example:
 ```bash
-ssh santosh@34.14.198.14 "cd ~/cloudeedze_la && git pull && export DATABASE_URL='postgresql://cloud_cost_user:1101@localhost/cloud_cost_optimizer' && cd migrations && chmod +x run_migrations.sh && ./run_migrations.sh all && pm2 restart all"
+ssh santosh@34.14.198.14 "cd ~/cloudeedze_la && git pull && export DATABASE_URL='postgresql://cloud_cost_user:1101@localhost/cloud_cost_optimizer' && cd migrations && chmod +x run_migrations.sh && ./run_migrations.sh all && psql \"\$DATABASE_URL\" -f create_admin_user.sql && pm2 restart all"
 ```
 
 ---
