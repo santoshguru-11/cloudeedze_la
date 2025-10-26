@@ -154,14 +154,14 @@ DROP TRIGGER IF EXISTS update_users_updated_at ON users;
 CREATE TRIGGER update_users_updated_at
     BEFORE UPDATE ON users
     FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
+    EXECUTE PROCEDURE update_updated_at_column();
 
 -- Apply trigger to cloud_credentials table
 DROP TRIGGER IF EXISTS update_cloud_credentials_updated_at ON cloud_credentials;
 CREATE TRIGGER update_cloud_credentials_updated_at
     BEFORE UPDATE ON cloud_credentials
     FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
+    EXECUTE PROCEDURE update_updated_at_column();
 
 -- ============================================
 -- Verification
