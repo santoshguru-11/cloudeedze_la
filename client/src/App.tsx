@@ -14,6 +14,9 @@ import { InventoryPage } from '@/pages/inventory';
 import CloudCredentialsPage from '@/pages/cloud-credentials.tsx';
 import TerraformUploadPage from '@/pages/terraform-upload';
 import ExcelToIaC from '@/pages/excel-to-iac';
+import AdminDashboard from '@/pages/admin-dashboard';
+import UserReports from '@/pages/user-reports';
+import SavedAnalyses from '@/pages/saved-analyses';
 import NotFound from '@/pages/not-found';
 
 function Router() {
@@ -41,6 +44,9 @@ function Router() {
           <Route path="/excel" component={ExcelToIaC} />
           <Route path="/terraform" component={TerraformUploadPage} />
           <Route path="/credentials" component={CloudCredentialsPage} />
+          <Route path="/reports" component={UserReports} />
+          <Route path="/analyses" component={SavedAnalyses} />
+          <Route path="/admin" component={AdminDashboard} />
           <Route path="/results/:id" component={Results} />
         </>
       ) : (

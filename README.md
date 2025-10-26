@@ -379,16 +379,6 @@ npm run test:coverage
 
 ## 🚀 Deployment
 
-### Docker Deployment
-
-```bash
-# Build Docker image
-docker build -t cloud-cost-optimizer .
-
-# Run with Docker Compose
-docker-compose up -d
-```
-
 ### Production Deployment
 
 1. **Environment Setup**

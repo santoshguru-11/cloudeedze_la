@@ -52,6 +52,23 @@ export default function Navbar() {
                     Terraform
                   </Button>
                 </Link>
+                <Link href="/reports">
+                  <Button variant="ghost" className="text-gray-700 hover:text-blue-600">
+                    Reports
+                  </Button>
+                </Link>
+                <Link href="/analyses">
+                  <Button variant="ghost" className="text-gray-700 hover:text-blue-600">
+                    Saved Analyses
+                  </Button>
+                </Link>
+                {(user as any)?.role === 'admin' && (
+                  <Link href="/admin">
+                    <Button variant="ghost" className="text-gray-700 hover:text-blue-600">
+                      Admin
+                    </Button>
+                  </Link>
+                )}
               </div>
             </div>
           )}

@@ -140,8 +140,7 @@ export function CloudCredentialsForm({
       
       if (validation.valid) {
         // Save to database
-        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://app.cloudedze.ai';
-        const response = await fetch(`${API_BASE_URL}/api/credentials`, {
+        const response = await fetch(`/api/credentials`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -204,8 +203,7 @@ export function CloudCredentialsForm({
     
     try {
       // Call API to delete credential from server
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://34.14.198.14:5000';
-      const response = await fetch(`${API_BASE_URL}/api/credentials/${id}`, {
+      const response = await fetch(`/api/credentials/${id}`, {
         method: 'DELETE',
         credentials: 'include',
       });

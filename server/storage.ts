@@ -1,18 +1,21 @@
-import type { 
-  InsertCostAnalysis, 
-  CostAnalysis, 
-  UpsertUser, 
+import type {
+  InsertCostAnalysis,
+  CostAnalysis,
+  UpsertUser,
   User,
   InsertCloudCredential,
   CloudCredential,
   InsertInventoryScan,
-  InventoryScan
+  InventoryScan,
+  InsertScanReport,
+  ScanReport
 } from "@shared/schema";
-import { 
-  users, 
-  costAnalyses, 
-  cloudCredentials, 
-  inventoryScans 
+import {
+  users,
+  costAnalyses,
+  cloudCredentials,
+  inventoryScans,
+  scanReports
 } from "@shared/schema";
 import { db } from "./db.js";
 import { eq, and } from "drizzle-orm";
@@ -29,6 +32,8 @@ export interface IStorage {
   createCostAnalysis(analysis: InsertCostAnalysis, userId?: string): Promise<CostAnalysis>;
   getCostAnalysis(id: string): Promise<CostAnalysis | undefined>;
   getAllCostAnalyses(userId?: string): Promise<CostAnalysis[]>;
+  updateCostAnalysis(id: string, userId: string, updates: Partial<InsertCostAnalysis>): Promise<CostAnalysis | undefined>;
+  deleteCostAnalysis(id: string, userId: string): Promise<boolean>;
   
   // Cloud credentials operations
   createCloudCredential(credential: InsertCloudCredential, userId: string): Promise<CloudCredential>;
@@ -40,6 +45,14 @@ export interface IStorage {
   createInventoryScan(scan: InsertInventoryScan, userId: string): Promise<InventoryScan>;
   getUserInventoryScans(userId: string): Promise<InventoryScan[]>;
   getInventoryScan(id: string): Promise<InventoryScan | undefined>;
+  getAllInventoryScans(): Promise<InventoryScan[]>;
+
+  // Scan report operations
+  createScanReport(report: InsertScanReport, userId: string): Promise<ScanReport>;
+  getUserScanReports(userId: string): Promise<ScanReport[]>;
+  getScanReport(id: string): Promise<ScanReport | undefined>;
+  getAllScanReports(): Promise<ScanReport[]>;
+  deleteScanReport(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -93,6 +106,22 @@ export class DatabaseStorage implements IStorage {
       return await db.select().from(costAnalyses).where(eq(costAnalyses.userId, userId));
     }
     return await db.select().from(costAnalyses);
+  }
+
+  async updateCostAnalysis(id: string, userId: string, updates: Partial<InsertCostAnalysis>): Promise<CostAnalysis | undefined> {
+    const [updatedAnalysis] = await db
+      .update(costAnalyses)
+      .set(updates)
+      .where(and(eq(costAnalyses.id, id), eq(costAnalyses.userId, userId)))
+      .returning();
+    return updatedAnalysis;
+  }
+
+  async deleteCostAnalysis(id: string, userId: string): Promise<boolean> {
+    const result = await db
+      .delete(costAnalyses)
+      .where(and(eq(costAnalyses.id, id), eq(costAnalyses.userId, userId)));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   // Cloud credentials operations (with encryption)
@@ -197,6 +226,47 @@ export class DatabaseStorage implements IStorage {
   async getInventoryScan(id: string): Promise<InventoryScan | undefined> {
     const [scan] = await db.select().from(inventoryScans).where(eq(inventoryScans.id, id));
     return scan;
+  }
+
+  async getAllInventoryScans(): Promise<InventoryScan[]> {
+    return await db
+      .select()
+      .from(inventoryScans)
+      .orderBy(inventoryScans.createdAt);
+  }
+
+  // Scan report operations
+  async createScanReport(report: InsertScanReport, userId: string): Promise<ScanReport> {
+    const [newReport] = await db
+      .insert(scanReports)
+      .values({ ...report, userId })
+      .returning();
+    return newReport;
+  }
+
+  async getUserScanReports(userId: string): Promise<ScanReport[]> {
+    return await db
+      .select()
+      .from(scanReports)
+      .where(eq(scanReports.userId, userId))
+      .orderBy(scanReports.createdAt);
+  }
+
+  async getScanReport(id: string): Promise<ScanReport | undefined> {
+    const [report] = await db.select().from(scanReports).where(eq(scanReports.id, id));
+    return report;
+  }
+
+  async getAllScanReports(): Promise<ScanReport[]> {
+    return await db
+      .select()
+      .from(scanReports)
+      .orderBy(scanReports.createdAt);
+  }
+
+  async deleteScanReport(id: string): Promise<boolean> {
+    const result = await db.delete(scanReports).where(eq(scanReports.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 }
 

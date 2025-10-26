@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import { UploadIcon, FileIcon, CheckCircleIcon, Server, Database, HardDrive, Network, Shield, Monitor } from "lucide-react";
+import { UploadIcon, FileIcon, CheckCircleIcon, Server, Database, HardDrive, Network, Shield, Monitor, FileText } from "lucide-react";
 import { useLocation } from "wouter";
 import { Helmet } from "react-helmet-async";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function TerraformUpload() {
   const { toast } = useToast();
@@ -18,6 +19,7 @@ export default function TerraformUpload() {
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadResult, setUploadResult] = useState<any>(null);
+  const [generatingReport, setGeneratingReport] = useState(false);
 
   const getServiceIcon = (service: string) => {
     switch (service.toLowerCase()) {
@@ -213,6 +215,45 @@ export default function TerraformUpload() {
     }
   };
 
+  const handleGenerateReport = async () => {
+    if (!uploadResult?.scanId) return;
+
+    setGeneratingReport(true);
+
+    try {
+      const response = await apiRequest("POST", "/api/reports/generate", {
+        scanId: uploadResult.scanId
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Report generated successfully. Redirecting to Reports page...",
+        });
+        // Redirect to reports page after a short delay
+        setTimeout(() => {
+          navigate('/reports');
+        }, 1000);
+      } else {
+        toast({
+          title: "Error",
+          description: result.message || 'Failed to generate report',
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Report generation error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate report. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
+
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -346,6 +387,49 @@ export default function TerraformUpload() {
                   <div className="text-sm text-gray-600">Est. Monthly Cost</div>
                 </div>
               </div>
+
+              {/* Success Message with Actions */}
+              <Alert className="border-green-200 bg-green-50 mb-6">
+                <CheckCircleIcon className="h-4 w-4 text-green-600" />
+                <AlertDescription className="text-green-800">
+                  <div className="space-y-3">
+                    <div>
+                      <p className="font-semibold">Terraform state parsed successfully!</p>
+                      <p className="text-sm mt-1">Click "Generate Report" to create a PDF report for this analysis.</p>
+                    </div>
+                    <div className="flex gap-2 mt-3">
+                      <Button
+                        onClick={handleGenerateReport}
+                        disabled={generatingReport}
+                        variant="default"
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        {generatingReport ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <FileText className="h-4 w-4 mr-1" />
+                            Generate Report
+                          </>
+                        )}
+                      </Button>
+                      {uploadResult.costAnalysis && (
+                        <Button
+                          onClick={() => navigate(`/results/${uploadResult.costAnalysis.analysisId}`)}
+                          variant="outline"
+                          size="sm"
+                        >
+                          View Cost Analysis
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </AlertDescription>
+              </Alert>
 
               {/* Resources Table */}
               <div className="mt-6">

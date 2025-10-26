@@ -108,7 +108,6 @@ cloudedze-backup-19-sept-0528/
 - **Development**: `npm run dev` - Full-stack development server
 - **Production**: `npm run build` - Optimized production build
 - **PM2**: Process management with ecosystem configuration
-- **Docker**: Containerization support
 - **Linux Deployment**: Automated deployment scripts
 
 ## 📋 **Cleanup Organization**

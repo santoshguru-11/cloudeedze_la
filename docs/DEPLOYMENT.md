@@ -22,135 +22,6 @@ This guide covers various deployment options for the Cloudedze application.
 - **Monitoring**: Application and infrastructure monitoring
 - **Backups**: Automated database backups
 
-## 🐳 Docker Deployment
-
-### Dockerfile
-
-The application includes a production-ready Dockerfile:
-
-```dockerfile
-# Multi-stage build for production
-FROM node:18-alpine AS builder
-
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-
-COPY . .
-RUN npm run build
-
-# Production stage
-FROM node:18-alpine AS production
-
-WORKDIR /app
-
-# Install Python for OCI integration
-RUN apk add --no-cache python3 py3-pip
-
-# Copy built application
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package*.json ./
-
-# Copy Python requirements and OCI scripts
-COPY requirements.txt ./
-COPY server/services/oci-inventory.py ./server/services/
-RUN pip3 install -r requirements.txt
-
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nextjs -u 1001
-USER nextjs
-
-EXPOSE 3000
-
-CMD ["npm", "start"]
-```
-
-### Docker Compose
-
-Create a `docker-compose.yml` file:
-
-```yaml
-version: '3.8'
-
-services:
-  app:
-    build: .
-    ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=production
-      - DATABASE_URL=postgresql://cloud_cost_user:${DB_PASSWORD}@db:5432/cloud_cost_optimizer
-      - SESSION_SECRET=${SESSION_SECRET}
-    depends_on:
-      - db
-    volumes:
-      - ./logs:/app/logs
-    restart: unless-stopped
-
-  db:
-    image: postgres:12-alpine
-    environment:
-      - POSTGRES_DB=cloud_cost_optimizer
-      - POSTGRES_USER=cloud_cost_user
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./database_setup.sql:/docker-entrypoint-initdb.d/01-setup.sql
-    ports:
-      - "5432:5432"
-    restart: unless-stopped
-
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-      - ./ssl:/etc/nginx/ssl
-    depends_on:
-      - app
-    restart: unless-stopped
-
-volumes:
-  postgres_data:
-```
-
-### Environment Variables
-
-Create a `.env` file:
-
-```env
-# Database
-DB_PASSWORD=your-secure-database-password
-
-# Application
-SESSION_SECRET=your-super-secret-session-key
-NODE_ENV=production
-
-# SSL (if using Let's Encrypt)
-LETSENCRYPT_EMAIL=your-email@example.com
-```
-
-### Deployment Commands
-
-```bash
-# Build and start services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop services
-docker-compose down
-
-# Update application
-docker-compose pull
-docker-compose up -d
-```
-
 ## ☁️ Cloud Deployment
 
 ### AWS Deployment
@@ -472,13 +343,13 @@ curl https://your-domain.com/api/health/detailed
 
 ```bash
 # View application logs
-docker-compose logs -f app
+pm2 logs
 
-# View database logs
-docker-compose logs -f db
+# View system logs
+journalctl -u cloudedze -f
 
-# View nginx logs
-docker-compose logs -f nginx
+# View PostgreSQL logs
+sudo tail -f /var/log/postgresql/postgresql-*.log
 ```
 
 ### Database Monitoring
@@ -567,13 +438,13 @@ tar -czf config-backup-$(date +%Y%m%d).tar.gz /etc/nginx/ /app/.env
 
 ```bash
 # Stop application
-docker-compose stop app
+pm2 stop all
 
 # Restore database
 gunzip -c backup_20240101_020000.sql.gz | psql cloud_cost_optimizer
 
 # Start application
-docker-compose start app
+pm2 start all
 ```
 
 #### Application Recovery
@@ -586,7 +457,7 @@ tar -xzf app-backup-20240101.tar.gz -C /
 tar -xzf config-backup-20240101.tar.gz -C /
 
 # Restart services
-docker-compose restart
+pm2 restart all
 ```
 
 ## 🔒 Security Hardening
@@ -637,39 +508,40 @@ docker-compose restart
 
 ```bash
 # Check logs
-docker-compose logs app
+pm2 logs
 
 # Check environment variables
-docker-compose exec app env
+printenv | grep NODE_ENV
 
-# Check database connection
-docker-compose exec app npm run db:test
+# Check application status
+pm2 status
 ```
 
 #### Database Connection Issues
 
 ```bash
 # Check database status
-docker-compose exec db pg_isready
+pg_isready
 
 # Check database logs
-docker-compose logs db
+sudo tail -f /var/log/postgresql/postgresql-*.log
 
 # Test connection
-docker-compose exec app psql $DATABASE_URL
+psql $DATABASE_URL
 ```
 
 #### Performance Issues
 
 ```bash
 # Check resource usage
-docker stats
+top
+htop
 
 # Check database performance
-docker-compose exec db psql -c "SELECT * FROM pg_stat_activity;"
+psql -c "SELECT * FROM pg_stat_activity;"
 
 # Check application logs for errors
-docker-compose logs app | grep ERROR
+pm2 logs | grep ERROR
 ```
 
 ### Emergency Procedures

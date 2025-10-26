@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Download, Upload, FileSpreadsheet, CheckCircle, AlertCircle, X, Zap } from 'lucide-react';
+import { Download, Upload, FileSpreadsheet, CheckCircle, AlertCircle, X, Zap, FileText } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import CloudedzeLogo from '../assets/logos/cloudedze-logo.svg';
 import CostResults from '@/components/cost-results';
@@ -22,6 +22,7 @@ interface ValidationResult {
 interface UploadResult {
   success: boolean;
   analysisId: string;
+  scanId?: string;
   resources: any[];
   summary: {
     totalResources: number;
@@ -55,6 +56,7 @@ export default function ExcelUpload() {
   const [progress, setProgress] = useState(0);
   const [testingWebhook, setTestingWebhook] = useState(false);
   const [webhookTestResult, setWebhookTestResult] = useState<any>(null);
+  const [generatingReport, setGeneratingReport] = useState(false);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -133,11 +135,8 @@ export default function ExcelUpload() {
       if (result.success) {
         setUploadResult(result);
         setProgress(100);
-        
-        // Redirect to results page after a short delay
-        setTimeout(() => {
-          setLocation(`/results/${result.analysisId}`);
-        }, 2000);
+
+        // No auto-redirect - let user choose where to go
       } else {
         setError(result.message || 'Upload failed. Please try again.');
       }
@@ -201,6 +200,37 @@ export default function ExcelUpload() {
     }
   };
 
+  const handleGenerateReport = async () => {
+    if (!uploadResult?.scanId) return;
+
+    setGeneratingReport(true);
+    setError('');
+
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://app.cloudedze.ai';
+      const response = await fetch(`${API_BASE_URL}/api/reports/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ scanId: uploadResult.scanId })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Show success message and redirect to reports page
+        setLocation('/reports');
+      } else {
+        setError(result.message || 'Failed to generate report');
+      }
+    } catch (error) {
+      console.error('Report generation error:', error);
+      setError('Failed to generate report. Please try again.');
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
+
   const resetForm = () => {
     setSelectedFile(null);
     setAnalysisName('');
@@ -209,6 +239,7 @@ export default function ExcelUpload() {
     setError('');
     setProgress(0);
     setWebhookTestResult(null);
+    setGeneratingReport(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -418,7 +449,40 @@ export default function ExcelUpload() {
                   <Alert className="border-green-200 bg-green-50">
                     <CheckCircle className="h-4 w-4 text-green-600" />
                     <AlertDescription className="text-green-800">
-                      Analysis completed successfully! Redirecting to results...
+                      <div className="space-y-3">
+                        <div>
+                          <p className="font-semibold">Upload completed successfully!</p>
+                          <p className="text-sm mt-1">Click "Generate Report" to create a PDF report for this analysis.</p>
+                        </div>
+                        <div className="flex gap-2 mt-3">
+                          <Button
+                            onClick={handleGenerateReport}
+                            disabled={generatingReport}
+                            variant="default"
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            {generatingReport ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
+                                Generating...
+                              </>
+                            ) : (
+                              <>
+                                <FileText className="h-4 w-4 mr-1" />
+                                Generate Report
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            onClick={() => setLocation(`/results/${uploadResult.analysisId}`)}
+                            variant="outline"
+                            size="sm"
+                          >
+                            View Cost Analysis
+                          </Button>
+                        </div>
+                      </div>
                     </AlertDescription>
                   </Alert>
 

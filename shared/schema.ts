@@ -23,6 +23,7 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  role: varchar("role").notNull().default('user'), // 'user' or 'admin'
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -46,6 +47,21 @@ export const inventoryScans = pgTable("inventory_scans", {
   scanData: jsonb("scan_data").notNull(),
   summary: jsonb("summary").notNull(),
   scanDuration: integer("scan_duration").notNull(), // milliseconds
+  status: varchar("status").notNull().default('completed'), // 'in-progress', 'completed', 'failed'
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Scan reports storage
+export const scanReports = pgTable("scan_reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  scanId: varchar("scan_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  reportPath: varchar("report_path").notNull(), // File path or URL to PDF
+  reportName: varchar("report_name").notNull(),
+  fileSize: integer("file_size"), // in bytes
+  reportData: jsonb("report_data"), // Metadata about the report (summary stats, etc.)
+  status: varchar("status").notNull().default('generated'), // 'generating', 'generated', 'failed'
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -63,6 +79,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   cloudCredentials: many(cloudCredentials),
   inventoryScans: many(inventoryScans),
   costAnalyses: many(costAnalyses),
+  scanReports: many(scanReports),
 }));
 
 export const cloudCredentialsRelations = relations(cloudCredentials, ({ one }) => ({
@@ -78,6 +95,18 @@ export const inventoryScansRelations = relations(inventoryScans, ({ one, many })
     references: [users.id],
   }),
   costAnalyses: many(costAnalyses),
+  reports: many(scanReports),
+}));
+
+export const scanReportsRelations = relations(scanReports, ({ one }) => ({
+  user: one(users, {
+    fields: [scanReports.userId],
+    references: [users.id],
+  }),
+  scan: one(inventoryScans, {
+    fields: [scanReports.scanId],
+    references: [inventoryScans.id],
+  }),
 }));
 
 export const costAnalysesRelations = relations(costAnalyses, ({ one }) => ({
@@ -107,6 +136,17 @@ export const insertInventoryScanSchema = createInsertSchema(inventoryScans).pick
   scanData: true,
   summary: true,
   scanDuration: true,
+  status: true,
+  errorMessage: true,
+});
+
+export const insertScanReportSchema = createInsertSchema(scanReports).pick({
+  scanId: true,
+  reportPath: true,
+  reportName: true,
+  fileSize: true,
+  reportData: true,
+  status: true,
 });
 
 export type UpsertUser = typeof users.$inferInsert;
@@ -117,6 +157,8 @@ export type InsertCloudCredential = z.infer<typeof insertCloudCredentialSchema>;
 export type CloudCredential = typeof cloudCredentials.$inferSelect;
 export type InsertInventoryScan = z.infer<typeof insertInventoryScanSchema>;
 export type InventoryScan = typeof inventoryScans.$inferSelect;
+export type InsertScanReport = z.infer<typeof insertScanReportSchema>;
+export type ScanReport = typeof scanReports.$inferSelect;
 
 // Frontend-specific schemas for form validation
 export const infrastructureRequirementsSchema = z.object({

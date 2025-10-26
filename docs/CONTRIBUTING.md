@@ -34,7 +34,6 @@ This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.
 - **Python** 3.8+ (for OCI integration)
 - **PostgreSQL** 12+
 - **Git** for version control
-- **Docker** (optional, for containerized development)
 
 ### Fork and Clone
 

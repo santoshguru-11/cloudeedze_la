@@ -149,12 +149,29 @@ export function InventoryScanner({ credentials, onInventoryScanned }: InventoryS
       
       return result;
     },
-    onSuccess: (result: { inventory: UnifiedInventory; costAnalysis?: any }) => {
+    onSuccess: async (result: { inventory: UnifiedInventory; costAnalysis?: any; scanId?: string }) => {
       onInventoryScanned(result.inventory);
       // If we got cost analysis automatically, set it
       if (result.costAnalysis) {
         setAutomaticCostAnalysis(result.costAnalysis);
       }
+
+      // Auto-generate PDF report if scanId is available
+      if (result.scanId) {
+        try {
+          const reportResponse = await apiRequest('POST', '/api/reports/auto-generate', {
+            scanId: result.scanId
+          });
+          const reportResult = await reportResponse.json();
+          if (reportResult.success) {
+            console.log('Report auto-generated successfully:', reportResult.report);
+          }
+        } catch (error) {
+          console.error('Failed to auto-generate report:', error);
+          // Don't block the scan completion if report generation fails
+        }
+      }
+
       // Reset progress after 2 seconds
       setTimeout(() => {
         setScanProgress(0);

@@ -1,10 +1,16 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { CloudProvider, CostCalculationResult } from "@shared/schema";
 import CostCharts from "./cost-charts";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
+import { apiRequest } from "@/lib/queryClient";
 
 interface CostResultsProps {
   results: CostCalculationResult;
@@ -12,6 +18,11 @@ interface CostResultsProps {
 }
 
 export default function CostResults({ results, analysisId }: CostResultsProps) {
+  const { toast } = useToast();
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [customName, setCustomName] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
   // Debug logging to see what we're getting
   console.log('CostResults received data:', { results, analysisId });
   
@@ -103,7 +114,7 @@ export default function CostResults({ results, analysisId }: CostResultsProps) {
       // Create PDF
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
-      
+
       // Calculate dimensions
       const imgWidth = 210; // A4 width in mm
       const pageHeight = 295; // A4 height in mm
@@ -133,14 +144,110 @@ export default function CostResults({ results, analysisId }: CostResultsProps) {
     }
   };
 
+  const handleSaveAnalysis = () => {
+    setSaveDialogOpen(true);
+  };
+
+  const handleSaveWithCustomName = async () => {
+    if (!customName.trim()) {
+      toast({
+        title: "Name Required",
+        description: "Please enter a name for your analysis",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const response = await apiRequest('POST', '/api/cost-analysis/save', {
+        analysisId,
+        customName: customName.trim(),
+        results
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast({
+          title: "Analysis Saved Successfully",
+          description: `Saved as "${customName}"`,
+          variant: "default",
+        });
+        setSaveDialogOpen(false);
+        setCustomName('');
+      } else {
+        throw new Error(result.message || 'Failed to save analysis');
+      }
+    } catch (error) {
+      console.error('Error saving analysis:', error);
+      toast({
+        title: "Save Failed",
+        description: error instanceof Error ? error.message : "Failed to save analysis. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
-    <div id="cost-results-content" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-slate-900">Cost Analysis Results</h2>
-        <p className="text-slate-600 mt-2">
-          Comprehensive cost breakdown across all cloud providers with optimization recommendations.
-        </p>
-      </div>
+    <>
+      {/* Save Analysis Dialog */}
+      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save Cost Analysis</DialogTitle>
+            <DialogDescription>
+              Enter a name for this cost analysis to save it for future reference.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="analysisName">Analysis Name</Label>
+              <Input
+                id="analysisName"
+                placeholder="e.g., Q1 2025 Cloud Migration Analysis"
+                value={customName}
+                onChange={(e) => setCustomName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !isSaving) {
+                    handleSaveWithCustomName();
+                  }
+                }}
+              />
+            </div>
+            {analysisId && (
+              <p className="text-sm text-muted-foreground">
+                Analysis ID: {analysisId.substring(0, 8)}...
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSaveDialogOpen(false);
+                setCustomName('');
+              }}
+              disabled={isSaving}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSaveWithCustomName} disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Save Analysis'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <div id="cost-results-content" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-8">
+          <h2 className="text-3xl font-bold text-slate-900">Cost Analysis Results</h2>
+          <p className="text-slate-600 mt-2">
+            Comprehensive cost breakdown across all cloud providers with optimization recommendations.
+          </p>
+        </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -509,10 +616,11 @@ export default function CostResults({ results, analysisId }: CostResultsProps) {
         <Button variant="outline" onClick={handleGeneratePDF}>
           Generate PDF Report
         </Button>
-        <Button className="bg-primary hover:bg-blue-700">
+        <Button onClick={handleSaveAnalysis} className="bg-primary hover:bg-blue-700">
           Save Analysis
         </Button>
       </div>
     </div>
+    </>
   );
 }

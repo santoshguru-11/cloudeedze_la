@@ -6,6 +6,8 @@ import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Helmet } from 'react-helmet-async';
 import {
   Upload,
@@ -50,6 +52,7 @@ interface MultiCloudCost {
 interface UploadResponse {
   success: boolean;
   message: string;
+  scanId?: string;
   summary: {
     totalResources: number;
     totalMonthlyCost: number;
@@ -72,6 +75,8 @@ export default function ExcelToIaC() {
   const [error, setError] = useState<string | null>(null);
   const [isGeneratingTerraform, setIsGeneratingTerraform] = useState(false);
   const [isGeneratingCSV, setIsGeneratingCSV] = useState(false);
+  const [generatingReport, setGeneratingReport] = useState(false);
+  const [reportName, setReportName] = useState('');
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -189,6 +194,42 @@ export default function ExcelToIaC() {
       setError(err instanceof Error ? err.message : 'Failed to generate cost estimate');
     } finally {
       setIsGeneratingCSV(false);
+    }
+  };
+
+  const handleGenerateReport = async () => {
+    if (!uploadResponse?.scanId) return;
+
+    setGeneratingReport(true);
+    setError(null);
+
+    try {
+      // Use custom report name or generate default
+      const finalReportName = reportName.trim() || `Infrastructure-Report-${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }).replace(/\s/g, '-')}`;
+
+      const response = await fetch('/api/reports/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          scanId: uploadResponse.scanId,
+          reportName: finalReportName
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Redirect to reports page
+        window.location.href = '/reports';
+      } else {
+        setError(result.message || 'Failed to generate report');
+      }
+    } catch (error) {
+      console.error('Report generation error:', error);
+      setError('Failed to generate report. Please try again.');
+    } finally {
+      setGeneratingReport(false);
     }
   };
 
@@ -625,8 +666,52 @@ export default function ExcelToIaC() {
             {/* Success Message */}
             <Alert className="border-green-200 bg-green-50">
               <CheckCircle className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-600">
-                {uploadResponse.message} You can now download the Terraform code and cost estimates.
+              <AlertDescription className="text-green-800">
+                <div className="space-y-3">
+                  <div>
+                    <p className="font-semibold">{uploadResponse.message}</p>
+                    <p className="text-sm mt-1">You can download the Terraform code and cost estimates, or generate a PDF report.</p>
+                  </div>
+                  {uploadResponse.scanId && (
+                    <div className="space-y-3 mt-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="reportName" className="text-sm font-medium text-green-900">
+                          Report Name (optional)
+                        </Label>
+                        <Input
+                          id="reportName"
+                          type="text"
+                          placeholder={`Infrastructure-Report-${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }).replace(/\s/g, '-')}`}
+                          value={reportName}
+                          onChange={(e) => setReportName(e.target.value)}
+                          className="max-w-md bg-white border-green-300"
+                        />
+                        <p className="text-xs text-green-700">
+                          Leave empty to use default name: Infrastructure-Report-{new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }).replace(/\s/g, '-')}
+                        </p>
+                      </div>
+                      <Button
+                        onClick={handleGenerateReport}
+                        disabled={generatingReport}
+                        variant="default"
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        {generatingReport ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <FileText className="h-4 w-4 mr-1" />
+                            Generate Report
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </AlertDescription>
             </Alert>
           </>
