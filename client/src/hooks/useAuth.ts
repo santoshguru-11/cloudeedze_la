@@ -46,19 +46,28 @@ export function useAuth() {
       });
 
       if (!res.ok) {
-        const errorData = await res.json();
-        return { success: false, error: errorData.message || "Login failed" };
+        try {
+          const errorData = await res.json();
+          return { success: false, error: errorData.message || "Login failed" };
+        } catch (parseError) {
+          // If we can't parse the error response, return a generic message
+          return { success: false, error: "Login failed. Please check your credentials." };
+        }
       }
 
       const data = await res.json();
-      
+
       // Invalidate and refetch user data
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      
+
       return { success: true, user: data.user };
     } catch (error) {
       console.error("Login error:", error);
-      return { success: false, error: "Network error" };
+      // Check if it's a network error
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        return { success: false, error: "Network error. Please check your connection." };
+      }
+      return { success: false, error: "An unexpected error occurred. Please try again." };
     }
   };
 
@@ -74,19 +83,28 @@ export function useAuth() {
       });
 
       if (!res.ok) {
-        const errorData = await res.json();
-        return { success: false, error: errorData.message || "Registration failed" };
+        try {
+          const errorData = await res.json();
+          return { success: false, error: errorData.message || "Registration failed" };
+        } catch (parseError) {
+          // If we can't parse the error response, return a generic message
+          return { success: false, error: "Registration failed. Please try again." };
+        }
       }
 
       const data = await res.json();
-      
+
       // Invalidate and refetch user data
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      
+
       return { success: true, user: data.user };
     } catch (error) {
       console.error("Registration error:", error);
-      return { success: false, error: "Network error" };
+      // Check if it's a network error
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        return { success: false, error: "Network error. Please check your connection." };
+      }
+      return { success: false, error: "An unexpected error occurred. Please try again." };
     }
   };
 

@@ -11,6 +11,8 @@ import { GoogleSheetsService } from "./services/google-sheets-service.js";
 import { setupAuth, isAuthenticated } from "./auth.js";
 import { decryptSync } from "./encryption.js";
 import multer from "multer";
+import { registerAdminRoutes } from "./admin-routes.js";
+import { pdfReportService } from "./services/pdf-report-service.js";
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -157,6 +159,136 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Save/update cost analysis with custom name (protected)
+  app.post("/api/cost-analysis/save", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { analysisId, customName, results } = req.body;
+
+      if (!analysisId) {
+        return res.status(400).json({ message: "Analysis ID is required" });
+      }
+
+      // Get the existing analysis
+      const existingAnalysis = await storage.getCostAnalysis(analysisId);
+      if (!existingAnalysis) {
+        return res.status(404).json({ message: "Analysis not found" });
+      }
+
+      // Verify ownership
+      if (existingAnalysis.userId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Update the analysis with custom name stored in requirements
+      const updatedRequirements = {
+        ...(existingAnalysis.requirements as any),
+        customName: customName
+      };
+
+      const updatedAnalysis = await storage.updateCostAnalysis(analysisId, userId, {
+        requirements: updatedRequirements
+      });
+
+      res.json({
+        success: true,
+        message: "Analysis saved successfully",
+        analysis: {
+          id: updatedAnalysis?.id,
+          customName: customName
+        }
+      });
+    } catch (error) {
+      console.error("Save analysis error:", error);
+      res.status(500).json({
+        message: error instanceof Error ? error.message : "Failed to save analysis"
+      });
+    }
+  });
+
+  // Delete cost analysis (protected)
+  app.delete("/api/analysis/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const analysisId = req.params.id;
+
+      // Get the existing analysis to verify ownership
+      const existingAnalysis = await storage.getCostAnalysis(analysisId);
+      if (!existingAnalysis) {
+        return res.status(404).json({ message: "Analysis not found" });
+      }
+
+      // Verify ownership
+      if (existingAnalysis.userId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Delete the analysis
+      const deleted = await storage.deleteCostAnalysis(analysisId, userId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Analysis not found" });
+      }
+
+      res.json({
+        success: true,
+        message: "Analysis deleted successfully"
+      });
+    } catch (error) {
+      console.error("Delete analysis error:", error);
+      res.status(500).json({
+        message: error instanceof Error ? error.message : "Failed to delete analysis"
+      });
+    }
+  });
+
+  // Rename cost analysis (protected)
+  app.patch("/api/analysis/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const analysisId = req.params.id;
+      const { customName } = req.body;
+
+      if (!customName || !customName.trim()) {
+        return res.status(400).json({ message: "Custom name is required" });
+      }
+
+      // Get the existing analysis to verify ownership
+      const existingAnalysis = await storage.getCostAnalysis(analysisId);
+      if (!existingAnalysis) {
+        return res.status(404).json({ message: "Analysis not found" });
+      }
+
+      // Verify ownership
+      if (existingAnalysis.userId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Update the analysis with new custom name
+      const updatedRequirements = {
+        ...(existingAnalysis.requirements as any),
+        customName: customName.trim()
+      };
+
+      const updatedAnalysis = await storage.updateCostAnalysis(analysisId, userId, {
+        requirements: updatedRequirements
+      });
+
+      res.json({
+        success: true,
+        message: "Analysis renamed successfully",
+        analysis: {
+          id: updatedAnalysis?.id,
+          customName: customName.trim()
+        }
+      });
+    } catch (error) {
+      console.error("Rename analysis error:", error);
+      res.status(500).json({
+        message: error instanceof Error ? error.message : "Failed to rename analysis"
+      });
+    }
+  });
+
   // Export results as CSV (protected)
   app.get("/api/export/:id/csv", isAuthenticated, async (req, res) => {
     try {
@@ -186,18 +318,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.id;
       const { provider, name, encryptedCredentials } = req.body;
-      
+
       // Validate required fields
       if (!provider || !name || !encryptedCredentials) {
         return res.status(400).json({ message: "Missing required fields: provider, name, encryptedCredentials" });
       }
-      
+
       const credential = await storage.createCloudCredential({
-        provider,
+        provider: provider.toUpperCase(), // Convert to uppercase for database constraint
         name,
         encryptedCredentials
       }, userId);
-      
+
       res.json({ id: credential.id, name: credential.name, provider: credential.provider });
     } catch (error) {
       console.error("Create credential error:", error);
@@ -598,7 +730,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           credentialsWithData.push({
             id: cred.id,
-            provider: cred.provider,
+            provider: cred.provider.toLowerCase() as 'aws' | 'azure' | 'gcp' | 'oci',
             name: cred.name,
             credentials: decryptedCredentials
           });
@@ -682,7 +814,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Build full requirements object for cost calculation
         const fullRequirements = {
-          currency: 'USD',
+          currency: 'USD' as const,
           licensing: {
             windows: { enabled: false, licenses: 0 },
             sqlServer: { enabled: false, edition: 'standard' as const, licenses: 0 },
@@ -755,6 +887,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
           media: analysis.costRequirements.media || {
             videoStreaming: { hours: 0, quality: '1080p' as const },
             transcoding: { minutes: 0, inputFormat: 'standard' as const }
+          },
+          advancedAI: {
+            vectorDatabase: { dimensions: 0, queries: 0 },
+            customChips: { tpuHours: 0, inferenceChips: 0 },
+            modelHosting: { models: 0, requests: 0 },
+            ragPipelines: { documents: 0, embeddings: 0 }
+          },
+          edge: {
+            edgeLocations: 0,
+            edgeCompute: 0,
+            fiveGNetworking: { networkSlices: 0, privateNetworks: 0 },
+            realTimeProcessing: 0
+          },
+          confidential: {
+            secureEnclaves: 0,
+            trustedExecution: 0,
+            privacyPreservingAnalytics: 0,
+            zeroTrustProcessing: 0
+          },
+          sustainability: {
+            carbonFootprintTracking: false,
+            renewableEnergyPreference: false,
+            greenCloudOptimization: false,
+            carbonOffsetCredits: 0
+          },
+          optimization: {
+            reservedInstanceStrategy: 'moderate' as const,
+            spotInstanceTolerance: 10,
+            autoScalingAggression: 'moderate' as const,
+            costAlerts: { enabled: true, thresholdPercent: 20, notificationPreference: 'email' as const }
           },
           scenarios: {
             disasterRecovery: { enabled: false, rtoHours: 24, rpoMinutes: 240, backupRegions: 1 },
@@ -1246,7 +1408,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const costAnalysis = await inventoryService.generateAutomaticCostAnalysis(inventory);
 
-      // Save the analysis
+      // Create inventory scan first so we can link the cost analysis to it
+      const inventoryScan = await storage.createInventoryScan({
+        summary: inventory.summary,
+        scanDuration: 0,
+        scanData: inventory
+      }, userId);
+
+      console.log(`✅ Excel inventory scan saved with ID: ${inventoryScan.id}`);
+
+      // Save the analysis with inventory scan link
       const analysis = await storage.createCostAnalysis({
         requirements: {
           currency: 'USD',
@@ -1278,7 +1449,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             autoScaling: { enabled: false, minInstances: 1, maxInstances: 10 }
           }
         },
-        results: costAnalysis.results
+        results: costAnalysis.results,
+        inventoryScanId: inventoryScan.id
       }, userId);
 
       // Prepare webhook data
@@ -1390,6 +1562,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         success: true,
         analysisId: analysis.id,
+        scanId: inventoryScan.id,
         resources: resources,
         summary: webhookData.summary,
         costAnalysis: webhookData.costAnalysis,
@@ -1530,6 +1703,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No Excel file provided" });
       }
 
+      const userId = req.user.id;
       console.log('📊 Excel to IaC: Processing file:', req.file.originalname);
 
       // Parse Excel file
@@ -1555,9 +1729,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For now, we'll store in session
       req.session.iacData = sessionData;
 
+      // Create inventory scan for PDF report generation
+      const inventoryResources = requirements.map((req, index) => ({
+        id: `iac-${Date.now()}-${index}`,
+        name: req.applicationName,
+        type: req.workloadType,
+        service: req.category,
+        provider: 'multi-cloud',
+        location: req.site,
+        state: 'planned',
+        tags: {},
+        costDetails: {
+          monthly: costEstimates[index]?.monthlyEstimate || 0,
+          yearly: costEstimates[index]?.yearlyEstimate || 0
+        }
+      }));
+
+      const inventory = {
+        resources: inventoryResources,
+        summary: {
+          totalResources: requirements.length,
+          providers: { 'multi-cloud': requirements.length },
+          services: requirements.reduce((acc, req) => {
+            acc[req.category] = (acc[req.category] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>),
+          locations: requirements.reduce((acc, req) => {
+            acc[req.site] = (acc[req.site] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>)
+        },
+        scanDate: new Date().toISOString(),
+        scanDuration: 0
+      };
+
+      // Save inventory scan to database with Excel-to-IaC data
+      const inventoryScan = await storage.createInventoryScan({
+        scanData: {
+          success: true,
+          inventory,
+          excelToIaC: {
+            requirements,
+            multiCloudCosts
+          }
+        },
+        summary: {
+          totalResources: inventory.resources.length,
+          scannedProviders: 1,
+          scanTime: new Date().toISOString()
+        },
+        scanDuration: 0
+      }, userId);
+
+      console.log(`✅ Excel-to-IaC inventory scan saved with ID: ${inventoryScan.id}`);
+
       res.json({
         success: true,
         message: "Excel file processed successfully",
+        scanId: inventoryScan.id,
         summary: {
           totalResources: requirements.length,
           totalMonthlyCost: costEstimates.reduce((sum, est) => sum + est.monthlyEstimate, 0),
@@ -1722,6 +1951,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+
+  // Register admin and reports routes
+  registerAdminRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;
