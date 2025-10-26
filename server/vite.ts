@@ -144,16 +144,12 @@ export function serveStatic(app: Express) {
       }
     }
     
-    // Handle app subdomain (app.cloudeedze.ai) - serve login page for /login
+    // Handle app subdomain (app.cloudeedze.ai) - serve the full application
     if (host === 'app.cloudeedze.ai') {
-      if (requestPath === '/login' || requestPath.startsWith('/login')) {
-        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-        res.setHeader('Pragma', 'no-cache');
-        res.setHeader('Expires', '0');
-        return res.sendFile(path.resolve(distPath, "index.html"));
-      }
-      // Redirect other routes to main domain
-      return res.redirect(301, `https://cloudedze.ai${requestPath}`);
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      return res.sendFile(path.resolve(distPath, "index.html"));
     }
     
     // Default fallback
