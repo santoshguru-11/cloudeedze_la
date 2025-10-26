@@ -113,10 +113,13 @@ export function serveStatic(app: Express) {
 
   // Serve static files with proper configuration
   app.use(express.static(distPath, {
-    maxAge: '1d',
+    maxAge: '1h', // Reduced from 1 day to 1 hour for faster updates
     setHeaders: (res, path) => {
       if (path.endsWith('.html')) {
         res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      } else if (path.match(/\.(js|css)$/)) {
+        // For JS/CSS files with content hashes, use shorter cache to ensure updates propagate faster
+        res.setHeader('Cache-Control', 'public, max-age=3600'); // 1 hour
       }
     }
   }));
