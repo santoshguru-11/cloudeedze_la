@@ -48,6 +48,78 @@ export default function CostResults({ results, analysisId }: CostResultsProps) {
 
   // If we have results but no providers array, try to extract it
   let providers = actualResults.providers;
+
+  // Check if providers is an object (new format) and convert to array
+  if (providers && typeof providers === 'object' && !Array.isArray(providers)) {
+    console.log('Converting providers object to array format');
+    providers = Object.entries(providers).map(([key, value]: [string, any]) => ({
+      name: key.toUpperCase(),
+      total: value.total || 0,
+      currencySymbol: '$',
+      compute: value.breakdown?.Compute || 0,
+      storage: value.breakdown?.Storage || 0,
+      database: value.breakdown?.Database || 0,
+      networking: value.breakdown?.Networking || 0,
+      licensing: value.breakdown?.Licensing || 0
+    }));
+  }
+
+  // BACKWARD COMPATIBILITY: Recalculate total if it's missing or 0
+  if (providers && Array.isArray(providers)) {
+    providers = providers.map(provider => {
+      // If total is missing or 0, calculate it from service costs
+      if (!provider.total || provider.total === 0) {
+        const calculatedTotal =
+          (provider.compute || 0) +
+          (provider.storage || 0) +
+          (provider.database || 0) +
+          (provider.networking || 0) +
+          (provider.licensing || 0) +
+          (provider.analytics || 0) +
+          (provider.ai || 0) +
+          (provider.security || 0) +
+          (provider.monitoring || 0) +
+          (provider.devops || 0) +
+          (provider.backup || 0) +
+          (provider.iot || 0) +
+          (provider.media || 0) +
+          (provider.quantum || 0) +
+          (provider.advancedAI || 0) +
+          (provider.edge || 0) +
+          (provider.confidential || 0) +
+          (provider.sustainability || 0) +
+          (provider.scenarios || 0);
+
+        if (calculatedTotal > 0) {
+          console.log(`⚠️ Recalculated total for ${provider.name}: $${calculatedTotal}/mo (was $${provider.total}/mo)`);
+          return {
+            ...provider,
+            total: Math.round(calculatedTotal * 100) / 100
+          };
+        }
+      }
+      return provider;
+    });
+
+    // Recalculate cheapest, mostExpensive, and potentialSavings if needed
+    if (providers.length > 0 && (!actualResults.cheapest || !actualResults.mostExpensive || actualResults.cheapest.total === 0)) {
+      const sortedByTotal = [...providers].sort((a, b) => (a.total || 0) - (b.total || 0));
+      const recalculatedCheapest = sortedByTotal[0];
+      const recalculatedMostExpensive = sortedByTotal[sortedByTotal.length - 1];
+      const recalculatedSavings = Math.round(((recalculatedMostExpensive.total || 0) - (recalculatedCheapest.total || 0)) * 100) / 100;
+
+      console.log(`⚠️ Recalculated: cheapest=${recalculatedCheapest.name} ($${recalculatedCheapest.total}/mo), mostExpensive=${recalculatedMostExpensive.name} ($${recalculatedMostExpensive.total}/mo), savings=$${recalculatedSavings}/mo`);
+
+      actualResults = {
+        ...actualResults,
+        providers,
+        cheapest: recalculatedCheapest,
+        mostExpensive: recalculatedMostExpensive,
+        potentialSavings: recalculatedSavings
+      };
+    }
+  }
+
   if (!providers && (actualResults as any).inventory && (actualResults as any).inventory.resources) {
     // Try to convert inventory data to providers format
     console.log('Converting inventory data to providers format');
@@ -62,7 +134,7 @@ export default function CostResults({ results, analysisId }: CostResultsProps) {
       licensing: 0
     }];
   }
-  
+
   // If we still don't have providers, try to create a basic one from the data
   if (!providers || providers.length === 0) {
     console.log('No providers found, creating basic provider from data');

@@ -157,7 +157,8 @@ export default function SavedAnalysesPage() {
     if (!results || !results.providers) return 0;
 
     // Find the cheapest provider's total cost
-    const costs = results.providers.map((p: any) => p.total);
+    // providers is an object with keys like aws, azure, gcp, oracle
+    const costs = Object.values(results.providers).map((p: any) => p.total);
     return costs.length > 0 ? Math.min(...costs) : 0;
   };
 

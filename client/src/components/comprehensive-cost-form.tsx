@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
@@ -32,7 +32,8 @@ export default function ComprehensiveCostForm() {
         sap: { enabled: false, licenses: 0 },
         microsoftOffice365: { enabled: false, licenses: 0 },
       },
-      compute: {
+      compute: [{
+        instances: 1,
         vcpus: 8,
         ram: 16,
         instanceType: "general-purpose",
@@ -47,7 +48,7 @@ export default function ComprehensiveCostForm() {
           functions: 0,
           executionTime: 1,
         },
-      },
+      }],
       storage: {
         objectStorage: {
           size: 0,
@@ -266,6 +267,11 @@ export default function ComprehensiveCostForm() {
         },
       },
     },
+  });
+
+  const { fields: computeFields, append: appendCompute, remove: removeCompute } = useFieldArray({
+    control: form.control,
+    name: "compute",
   });
 
   const calculateMutation = useMutation({
@@ -556,202 +562,268 @@ export default function ComprehensiveCostForm() {
                 <TabsContent value="compute" className="space-y-6">
                   <div className="mb-4">
                     <h4 className="text-md font-semibold">Traditional Compute Resources</h4>
-                    <p className="text-sm text-slate-600">Configure virtual machines, containers, and dedicated instances with boot volume storage</p>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                      control={form.control}
-                      name="compute.vcpus"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>vCPUs</FormLabel>
-                          <Select onValueChange={(value) => field.onChange(parseInt(value))} defaultValue={String(field.value)}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select vCPUs" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="2">2 vCPUs</SelectItem>
-                              <SelectItem value="4">4 vCPUs</SelectItem>
-                              <SelectItem value="8">8 vCPUs</SelectItem>
-                              <SelectItem value="16">16 vCPUs</SelectItem>
-                              <SelectItem value="32">32 vCPUs</SelectItem>
-                              <SelectItem value="64">64 vCPUs</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="compute.ram"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>RAM (GB)</FormLabel>
-                          <Select onValueChange={(value) => field.onChange(parseInt(value))} defaultValue={String(field.value)}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select RAM" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="4">4 GB</SelectItem>
-                              <SelectItem value="8">8 GB</SelectItem>
-                              <SelectItem value="16">16 GB</SelectItem>
-                              <SelectItem value="32">32 GB</SelectItem>
-                              <SelectItem value="64">64 GB</SelectItem>
-                              <SelectItem value="128">128 GB</SelectItem>
-                              <SelectItem value="256">256 GB</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="compute.instanceType"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Instance Type</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select instance type" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="general-purpose">General Purpose</SelectItem>
-                              <SelectItem value="compute-optimized">Compute Optimized</SelectItem>
-                              <SelectItem value="memory-optimized">Memory Optimized</SelectItem>
-                              <SelectItem value="storage-optimized">Storage Optimized</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="compute.operatingSystem"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Operating System</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select OS" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="linux">Linux</SelectItem>
-                              <SelectItem value="windows">Windows</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="compute.region"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Region</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select region" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="us-east-1">US East (N. Virginia)</SelectItem>
-                              <SelectItem value="us-west-2">US West (Oregon)</SelectItem>
-                              <SelectItem value="eu-west-1">Europe (Ireland)</SelectItem>
-                              <SelectItem value="eu-central-1">Europe (Frankfurt)</SelectItem>
-                              <SelectItem value="ap-southeast-1">Asia Pacific (Singapore)</SelectItem>
-                              <SelectItem value="ap-northeast-1">Asia Pacific (Tokyo)</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <p className="text-sm text-slate-600">Configure virtual machines, containers, and dedicated instances with boot volume storage. You can add multiple resource configurations with different specifications.</p>
                   </div>
 
-                  {/* Boot Volume Configuration */}
-                  <div className="space-y-4">
-                    <h4 className="text-md font-semibold">Boot Volume Storage</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <FormField
-                        control={form.control}
-                        name="compute.bootVolume.size"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Boot Volume Size (GB)</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                placeholder="30"
-                                {...field}
-                                onChange={(e) => field.onChange(parseInt(e.target.value) || 30)}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
+                  {computeFields.map((field, index) => (
+                    <Card key={field.id} className="p-6">
+                      <div className="flex justify-between items-center mb-4">
+                        <h5 className="font-semibold">Compute Resource #{index + 1}</h5>
+                        {computeFields.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => removeCompute(index)}
+                          >
+                            Remove
+                          </Button>
                         )}
-                      />
+                      </div>
 
-                      <FormField
-                        control={form.control}
-                        name="compute.bootVolume.type"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Volume Type</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <FormField
+                          control={form.control}
+                          name={`compute.${index}.instances` as const}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Number of Instances</FormLabel>
                               <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select volume type" />
-                                </SelectTrigger>
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  max="1000"
+                                  {...field}
+                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                                />
                               </FormControl>
-                              <SelectContent>
-                                <SelectItem value="ssd-gp3">SSD GP3 (General Purpose)</SelectItem>
-                                <SelectItem value="ssd-gp2">SSD GP2 (Previous Gen)</SelectItem>
-                                <SelectItem value="ssd-io2">SSD IO2 (High IOPS)</SelectItem>
-                                <SelectItem value="hdd-standard">HDD Standard</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                              <FormDescription>
+                                How many instances with this configuration do you need?
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
 
-                      <FormField
-                        control={form.control}
-                        name="compute.bootVolume.iops"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>IOPS (for IO2)</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                placeholder="3000"
-                                {...field}
-                                onChange={(e) => field.onChange(parseInt(e.target.value) || 3000)}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </div>
+                        <FormField
+                          control={form.control}
+                          name={`compute.${index}.vcpus` as const}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>vCPUs</FormLabel>
+                              <Select onValueChange={(value) => field.onChange(parseInt(value))} defaultValue={String(field.value)}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select vCPUs" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="2">2 vCPUs</SelectItem>
+                                  <SelectItem value="4">4 vCPUs</SelectItem>
+                                  <SelectItem value="8">8 vCPUs</SelectItem>
+                                  <SelectItem value="16">16 vCPUs</SelectItem>
+                                  <SelectItem value="32">32 vCPUs</SelectItem>
+                                  <SelectItem value="64">64 vCPUs</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name={`compute.${index}.ram` as const}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>RAM (GB)</FormLabel>
+                              <Select onValueChange={(value) => field.onChange(parseInt(value))} defaultValue={String(field.value)}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select RAM" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="4">4 GB</SelectItem>
+                                  <SelectItem value="8">8 GB</SelectItem>
+                                  <SelectItem value="16">16 GB</SelectItem>
+                                  <SelectItem value="32">32 GB</SelectItem>
+                                  <SelectItem value="64">64 GB</SelectItem>
+                                  <SelectItem value="128">128 GB</SelectItem>
+                                  <SelectItem value="256">256 GB</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name={`compute.${index}.instanceType` as const}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Instance Type</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select instance type" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="general-purpose">General Purpose</SelectItem>
+                                  <SelectItem value="compute-optimized">Compute Optimized</SelectItem>
+                                  <SelectItem value="memory-optimized">Memory Optimized</SelectItem>
+                                  <SelectItem value="storage-optimized">Storage Optimized</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name={`compute.${index}.operatingSystem` as const}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Operating System</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select OS" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="linux">Linux</SelectItem>
+                                  <SelectItem value="windows">Windows</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name={`compute.${index}.region` as const}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Region</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select region" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="us-east-1">US East (N. Virginia)</SelectItem>
+                                  <SelectItem value="us-west-2">US West (Oregon)</SelectItem>
+                                  <SelectItem value="eu-west-1">Europe (Ireland)</SelectItem>
+                                  <SelectItem value="eu-central-1">Europe (Frankfurt)</SelectItem>
+                                  <SelectItem value="ap-southeast-1">Asia Pacific (Singapore)</SelectItem>
+                                  <SelectItem value="ap-northeast-1">Asia Pacific (Tokyo)</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      {/* Boot Volume Configuration */}
+                      <div className="space-y-4">
+                        <h5 className="font-semibold">Boot Volume Storage</h5>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          <FormField
+                            control={form.control}
+                            name={`compute.${index}.bootVolume.size` as const}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Boot Volume Size (GB)</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    placeholder="30"
+                                    {...field}
+                                    onChange={(e) => field.onChange(parseInt(e.target.value) || 30)}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name={`compute.${index}.bootVolume.type` as const}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Volume Type</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select volume type" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="ssd-gp3">SSD GP3 (General Purpose)</SelectItem>
+                                    <SelectItem value="ssd-gp2">SSD GP2 (Previous Gen)</SelectItem>
+                                    <SelectItem value="ssd-io2">SSD IO2 (High IOPS)</SelectItem>
+                                    <SelectItem value="hdd-standard">HDD Standard</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name={`compute.${index}.bootVolume.iops` as const}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>IOPS (for IO2)</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    placeholder="3000"
+                                    {...field}
+                                    onChange={(e) => field.onChange(parseInt(e.target.value) || 3000)}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => appendCompute({
+                      instances: 1,
+                      vcpus: 8,
+                      ram: 16,
+                      instanceType: "general-purpose",
+                      region: "us-east-1",
+                      operatingSystem: "linux",
+                      bootVolume: {
+                        size: 30,
+                        type: "ssd-gp3",
+                        iops: 3000,
+                      },
+                      serverless: {
+                        functions: 0,
+                        executionTime: 1,
+                      },
+                    })}
+                  >
+                    + Add Another Compute Resource
+                  </Button>
 
 
                 </TabsContent>
@@ -760,11 +832,11 @@ export default function ComprehensiveCostForm() {
                 <TabsContent value="serverless" className="space-y-6">
                   <div className="space-y-4">
                     <h4 className="text-md font-semibold">Serverless Functions Configuration</h4>
-                    <p className="text-sm text-slate-600">Configure serverless functions across all cloud providers (AWS Lambda, Azure Functions, Google Cloud Functions, Oracle Functions)</p>
+                    <p className="text-sm text-slate-600">Configure serverless functions for the first compute resource across all cloud providers (AWS Lambda, Azure Functions, Google Cloud Functions, Oracle Functions)</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <FormField
                         control={form.control}
-                        name="compute.serverless.functions"
+                        name="compute.0.serverless.functions"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Function Invocations (per month)</FormLabel>
@@ -783,7 +855,7 @@ export default function ComprehensiveCostForm() {
 
                       <FormField
                         control={form.control}
-                        name="compute.serverless.executionTime"
+                        name="compute.0.serverless.executionTime"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Avg. Execution Time (minutes)</FormLabel>

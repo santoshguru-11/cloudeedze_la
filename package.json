@@ -12,6 +12,8 @@
     "migrate": "tsx migrations/run-migration.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-ec2": "^3.922.0",
+    "@aws-sdk/client-pricing": "^3.922.0",
     "@azure/arm-resources": "^7.0.0",
     "@azure/identity": "^4.11.1",
     "@google-cloud/asset": "^6.3.0",

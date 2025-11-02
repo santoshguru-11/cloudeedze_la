@@ -74,12 +74,28 @@ export const costAnalyses = pgTable("cost_analyses", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Cost customizations storage
+export const costCustomizations = pgTable("cost_customizations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  environmentType: varchar("environment_type").notNull(), // 'production', 'staging', 'development', etc.
+  runningSchedule: jsonb("running_schedule").notNull(), // { hoursPerDay, daysPerWeek, schedule }
+  pricingModel: jsonb("pricing_model").notNull(), // { type, commitment, computeSavingsPlan }
+  tags: jsonb("tags"), // Optional tags for organization
+  isDefault: boolean("is_default").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   cloudCredentials: many(cloudCredentials),
   inventoryScans: many(inventoryScans),
   costAnalyses: many(costAnalyses),
   scanReports: many(scanReports),
+  costCustomizations: many(costCustomizations),
 }));
 
 export const cloudCredentialsRelations = relations(cloudCredentials, ({ one }) => ({
@@ -120,6 +136,13 @@ export const costAnalysesRelations = relations(costAnalyses, ({ one }) => ({
   }),
 }));
 
+export const costCustomizationsRelations = relations(costCustomizations, ({ one }) => ({
+  user: one(users, {
+    fields: [costCustomizations.userId],
+    references: [users.id],
+  }),
+}));
+
 export const insertCostAnalysisSchema = createInsertSchema(costAnalyses).pick({
   requirements: true,
   results: true,
@@ -149,6 +172,16 @@ export const insertScanReportSchema = createInsertSchema(scanReports).pick({
   status: true,
 });
 
+export const insertCostCustomizationSchema = createInsertSchema(costCustomizations).pick({
+  name: true,
+  description: true,
+  environmentType: true,
+  runningSchedule: true,
+  pricingModel: true,
+  tags: true,
+  isDefault: true,
+});
+
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type InsertCostAnalysis = z.infer<typeof insertCostAnalysisSchema>;
@@ -159,6 +192,8 @@ export type InsertInventoryScan = z.infer<typeof insertInventoryScanSchema>;
 export type InventoryScan = typeof inventoryScans.$inferSelect;
 export type InsertScanReport = z.infer<typeof insertScanReportSchema>;
 export type ScanReport = typeof scanReports.$inferSelect;
+export type InsertCostCustomization = z.infer<typeof insertCostCustomizationSchema>;
+export type CostCustomization = typeof costCustomizations.$inferSelect;
 
 // Frontend-specific schemas for form validation
 export const infrastructureRequirementsSchema = z.object({
@@ -196,8 +231,9 @@ export const infrastructureRequirementsSchema = z.object({
       licenses: z.number().min(0).max(10000).default(0),
     }),
   }),
-  // Compute Services
-  compute: z.object({
+  // Compute Services - Array to support multiple parallel configurations
+  compute: z.array(z.object({
+    instances: z.number().min(1).max(1000).default(1), // Number of instances with this config
     vcpus: z.number().min(1).max(128),
     ram: z.number().min(1).max(1024),
     instanceType: z.enum(['general-purpose', 'compute-optimized', 'memory-optimized', 'storage-optimized']),
@@ -212,7 +248,7 @@ export const infrastructureRequirementsSchema = z.object({
       functions: z.number().min(0).max(1000000).default(0),
       executionTime: z.number().min(0).max(15).default(1), // minutes
     }).optional(),
-  }),
+  })).min(1), // At least one compute config required
   
   // Storage Services
   storage: z.object({
@@ -512,3 +548,57 @@ export interface CostCalculationResult {
     multiCloud: string;
   };
 }
+
+// Cost Customization Schemas
+export const environmentConfigSchema = z.object({
+  name: z.string().min(1, "Environment name is required"),
+  type: z.enum(['production', 'staging', 'development', 'testing', 'qa', 'demo', 'disaster-recovery']),
+  description: z.string().optional(),
+});
+
+export const runningScheduleSchema = z.object({
+  hoursPerDay: z.number().min(1).max(24, "Hours per day must be between 1 and 24"),
+  daysPerWeek: z.number().min(1).max(7, "Days per week must be between 1 and 7"),
+  hoursPerMonth: z.number().min(1).max(730).optional(),
+  timezone: z.string().optional(),
+  schedule: z.string().optional(), // e.g., "9am-5pm Mon-Fri"
+});
+
+export const pricingModelSchema = z.object({
+  type: z.enum(['on-demand', 'reserved-1yr', 'reserved-3yr', 'savings-plan', 'spot']),
+  commitment: z.enum(['no-upfront', 'partial-upfront', 'all-upfront']).optional(),
+  computeSavingsPlan: z.number().min(0).max(100).optional(),
+  spotMaxPrice: z.number().min(0).optional(),
+});
+
+export const costCustomizationFormSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  description: z.string().optional(),
+  environment: environmentConfigSchema,
+  runningSchedule: runningScheduleSchema,
+  pricingModel: pricingModelSchema,
+  tags: z.record(z.string(), z.string()).optional(),
+});
+
+export const customizedCostResultSchema = z.object({
+  baseCost: z.number(),
+  customizedCost: z.number(),
+  savings: z.number(),
+  savingsPercentage: z.number(),
+  breakdown: z.object({
+    runningHoursDiscount: z.number(),
+    pricingModelDiscount: z.number(),
+    totalDiscount: z.number(),
+  }),
+  details: z.object({
+    hoursPerMonth: z.number(),
+    utilizationPercentage: z.number(),
+    effectiveHourlyRate: z.number(),
+  }),
+});
+
+export type EnvironmentConfig = z.infer<typeof environmentConfigSchema>;
+export type RunningSchedule = z.infer<typeof runningScheduleSchema>;
+export type PricingModel = z.infer<typeof pricingModelSchema>;
+export type CostCustomizationForm = z.infer<typeof costCustomizationFormSchema>;
+export type CustomizedCostResult = z.infer<typeof customizedCostResultSchema>;
