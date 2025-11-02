@@ -11,6 +11,7 @@ import { Helmet } from "react-helmet-async";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import CostResults from '@/components/cost-results';
 
 export default function TerraformUpload() {
   const { toast } = useToast();
@@ -351,35 +352,42 @@ export default function TerraformUpload() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {uploadResult.inventory.summary.totalResources}
+              <div className="space-y-3">
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">Summary</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">Total Resources:</span>
+                      <span className="ml-2 font-medium">{uploadResult.inventory.summary.totalResources}</span>
+                    </div>
                   </div>
-                  <div className="text-sm text-gray-600">Total Resources</div>
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">
-                    {Object.keys(uploadResult.inventory.summary.providers).length}
+
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">By Provider</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(uploadResult.inventory.summary.providers).map(([provider, count]) => (
+                      <Badge key={provider} variant="secondary">
+                        {provider}: {count}
+                      </Badge>
+                    ))}
                   </div>
-                  <div className="text-sm text-gray-600">Providers</div>
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-600">
-                    {Object.keys(uploadResult.inventory.summary.services).length}
+
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">By Type</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(uploadResult.inventory.summary.services).map(([type, count]) => (
+                      <Badge key={type} variant="outline">
+                        {type}: {count}
+                      </Badge>
+                    ))}
                   </div>
-                  <div className="text-sm text-gray-600">Services</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-orange-600">
-                    {Object.keys(uploadResult.inventory.summary.regions).length}
-                  </div>
-                  <div className="text-sm text-gray-600">Regions</div>
                 </div>
               </div>
 
               {/* Success Message with Actions */}
-              <Alert className="border-green-200 bg-green-50 mb-6">
+              <Alert className="border-green-200 bg-green-50 mb-6 mt-6">
                 <CheckCircle className="h-4 w-4 text-green-600" />
                 <AlertDescription className="text-green-800">
                   <div className="space-y-3">
@@ -484,6 +492,16 @@ export default function TerraformUpload() {
                 )}
 
               </div>
+
+              {/* Display multi-cloud cost analysis */}
+              {uploadResult.costAnalysis && uploadResult.costAnalysis.results && (
+                <div className="mt-8">
+                  <CostResults
+                    results={uploadResult.costAnalysis.results}
+                    analysisId={uploadResult.costAnalysis.analysisId}
+                  />
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
