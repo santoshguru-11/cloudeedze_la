@@ -72,37 +72,10 @@ export default function UserReports() {
       }
       return res.json();
     },
-    onSuccess: (data) => {
-      queryClient.setQueryData(['/api/reports'], (oldData: any) => {
-        if (oldData) {
-          // The API returns a `report` object on success.
-          // We can use this to optimistically update the UI.
-          const newReport = data.report;
-
-          // It's possible the new report is missing some fields the UI needs.
-          // We'll provide some default values to avoid crashing the UI.
-          const optimisticReport = {
-            ...newReport,
-            reportName: newReport.reportName || 'Generating...',
-            fileSize: newReport.fileSize || 0,
-            createdAt: newReport.createdAt || new Date().toISOString(),
-            scan: {
-              createdAt: new Date().toISOString(),
-              summary: { totalResources: '...' },
-            },
-          };
-
-          return {
-            ...oldData,
-            reports: [...oldData.reports, optimisticReport],
-          };
-        }
-        return oldData;
-      });
-
-      // We still invalidate to refetch the full data in the background
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/reports'] });
-
+    },
+    onSuccess: () => {
       toast({
         title: "Success",
         description: "Report generation initiated. It will appear in the list shortly.",
