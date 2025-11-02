@@ -1,8 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage.js";
-import { ComprehensiveCostCalculator } from "./utils/comprehensiveCostCalculator.js";
-import { infrastructureRequirementsSchema, insertCloudCredentialSchema, insertInventoryScanSchema } from "@shared/schema";
+import { HybridPricingCalculator } from "./services/pricing/hybrid-pricing-calculator.js";
+import { infrastructureRequirementsSchema, insertCloudCredentialSchema, insertInventoryScanSchema, costCustomizationFormSchema } from "@shared/schema";
 import { CloudInventoryService, type InventoryScanRequest } from "./services/inventory-service.js";
 import { TerraformStateParser } from "./services/terraform-parser.js";
 import { ExcelParserService } from "./services/excel-parser.js";
@@ -13,6 +13,7 @@ import { decryptSync } from "./encryption.js";
 import multer from "multer";
 import { registerAdminRoutes } from "./admin-routes.js";
 import { pdfReportService } from "./services/pdf-report-service.js";
+import { CostCustomizationService } from "./services/cost-customization-service.js";
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -72,10 +73,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  const costCalculator = new ComprehensiveCostCalculator();
+  // Initialize hybrid pricing calculator (uses API pricing with fallback to static)
+  const useApiPricing = process.env.USE_API_PRICING === 'true';
+  const costCalculator = new HybridPricingCalculator(useApiPricing);
+  console.log(`💰 Pricing mode: ${useApiPricing ? 'Live API with fallback' : 'Static JSON only'}`);
   const inventoryService = new CloudInventoryService();
   const terraformParser = new TerraformStateParser();
   const excelParser = new ExcelParserService();
+  const costCustomizationService = new CostCustomizationService();
   
   // Initialize Google Sheets service if configured
   let googleSheetsService: GoogleSheetsService | null = null;
@@ -112,7 +117,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.id;
       const requirements = infrastructureRequirementsSchema.parse(req.body);
-      const results = costCalculator.calculateCosts(requirements);
+      const results = await costCalculator.calculateCosts(requirements);
       
       // Save to storage with user association
       const analysis = await storage.createCostAnalysis({
@@ -203,6 +208,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         message: error instanceof Error ? error.message : "Failed to save analysis"
       });
+    }
+  });
+
+  // Get pricing status and cache info
+  app.get("/api/pricing/status", isAuthenticated, (req: any, res) => {
+    try {
+      const pricingInfo = costCalculator.getPricingInfo();
+      res.json({
+        success: true,
+        ...pricingInfo,
+        apiPricingEnabled: useApiPricing,
+        fallbackEnabled: process.env.PRICING_FALLBACK_ENABLED === 'true',
+        cacheTTL: process.env.PRICING_CACHE_TTL || 3600
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Clear pricing cache (admin only)
+  app.post("/api/pricing/clear-cache", isAuthenticated, (req: any, res) => {
+    try {
+      costCalculator.clearCache();
+      res.json({
+        success: true,
+        message: "Pricing cache cleared successfully"
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
     }
   });
 
@@ -927,7 +961,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Actually calculate the costs!
         console.log('Calculating costs with cost calculator...');
-        const costResults = costCalculator.calculateCosts(fullRequirements);
+        const costResults = await costCalculator.calculateCosts(fullRequirements);
         console.log('Cost calculation complete');
 
         costAnalysis = await storage.createCostAnalysis({
@@ -1020,7 +1054,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       const { inventory, scanId } = req.body;
       const analysis = await inventoryService.generateAutomaticCostAnalysis(inventory);
-      
+
       // Convert inventory mapping to full requirements format
       const fullRequirements = {
         currency: 'USD' as const,
@@ -1133,17 +1167,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           costAlerts: { enabled: true, thresholdPercent: 20, notificationPreference: 'email' as const }
         }
       };
-      
+
       // Calculate costs using the full requirements
-      const costResults = costCalculator.calculateCosts(fullRequirements);
-      
+      const costResults = await costCalculator.calculateCosts(fullRequirements);
+
       // Create cost analysis with inventory link
       const costAnalysis = await storage.createCostAnalysis({
         requirements: analysis.costRequirements,
         results: costResults,
         inventoryScanId: scanId
       }, userId);
-      
+
       res.json({
         success: true,
         analysis: {
@@ -1156,9 +1190,196 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Inventory cost analysis error:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
-        message: error instanceof Error ? error.message : "Failed to analyze inventory costs" 
+        message: error instanceof Error ? error.message : "Failed to analyze inventory costs"
+      });
+    }
+  });
+
+  // Cost Customization Endpoints (protected)
+
+  // Get all cost customizations for user
+  app.get("/api/cost-customizations", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const customizations = await storage.getUserCostCustomizations(userId);
+      res.json({ success: true, customizations });
+    } catch (error) {
+      console.error("Get cost customizations error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to retrieve cost customizations"
+      });
+    }
+  });
+
+  // Create new cost customization
+  app.post("/api/cost-customizations", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const customizationData = costCustomizationFormSchema.parse(req.body);
+
+      const customization = await storage.createCostCustomization({
+        name: customizationData.name,
+        description: customizationData.description,
+        environmentType: customizationData.environment.type,
+        runningSchedule: customizationData.runningSchedule as any,
+        pricingModel: customizationData.pricingModel as any,
+        tags: customizationData.tags as any,
+        isDefault: false
+      }, userId);
+
+      res.json({ success: true, customization });
+    } catch (error) {
+      console.error("Create cost customization error:", error);
+      res.status(400).json({
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to create cost customization"
+      });
+    }
+  });
+
+  // Get specific cost customization
+  app.get("/api/cost-customizations/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const customization = await storage.getCostCustomization(req.params.id, userId);
+
+      if (!customization) {
+        return res.status(404).json({
+          success: false,
+          message: "Cost customization not found"
+        });
+      }
+
+      res.json({ success: true, customization });
+    } catch (error) {
+      console.error("Get cost customization error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to retrieve cost customization"
+      });
+    }
+  });
+
+  // Update cost customization
+  app.put("/api/cost-customizations/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const customizationData = costCustomizationFormSchema.parse(req.body);
+
+      const updated = await storage.updateCostCustomization(req.params.id, userId, {
+        name: customizationData.name,
+        description: customizationData.description,
+        environmentType: customizationData.environment.type,
+        runningSchedule: customizationData.runningSchedule as any,
+        pricingModel: customizationData.pricingModel as any,
+        tags: customizationData.tags as any
+      });
+
+      if (!updated) {
+        return res.status(404).json({
+          success: false,
+          message: "Cost customization not found"
+        });
+      }
+
+      res.json({ success: true, customization: updated });
+    } catch (error) {
+      console.error("Update cost customization error:", error);
+      res.status(400).json({
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to update cost customization"
+      });
+    }
+  });
+
+  // Delete cost customization
+  app.delete("/api/cost-customizations/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const deleted = await storage.deleteCostCustomization(req.params.id, userId);
+
+      if (!deleted) {
+        return res.status(404).json({
+          success: false,
+          message: "Cost customization not found"
+        });
+      }
+
+      res.json({ success: true, message: "Cost customization deleted successfully" });
+    } catch (error) {
+      console.error("Delete cost customization error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to delete cost customization"
+      });
+    }
+  });
+
+  // Calculate costs with customization (without saving)
+  app.post("/api/cost-customizations/calculate", isAuthenticated, async (req: any, res) => {
+    try {
+      const { baseMonthlyCost, customization } = req.body;
+
+      if (!baseMonthlyCost || !customization) {
+        return res.status(400).json({
+          success: false,
+          message: "Base monthly cost and customization data are required"
+        });
+      }
+
+      const result = costCustomizationService.calculateCustomizedCost(baseMonthlyCost, customization);
+      const recommendations = costCustomizationService.generateRecommendations(baseMonthlyCost, customization);
+
+      res.json({
+        success: true,
+        result,
+        recommendations
+      });
+    } catch (error) {
+      console.error("Calculate customized cost error:", error);
+      res.status(400).json({
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to calculate customized cost"
+      });
+    }
+  });
+
+  // Get schedule templates
+  app.get("/api/cost-customizations/templates/schedules", isAuthenticated, (req, res) => {
+    try {
+      const templates = costCustomizationService.getScheduleTemplates();
+      res.json({ success: true, templates });
+    } catch (error) {
+      console.error("Get schedule templates error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to retrieve schedule templates"
+      });
+    }
+  });
+
+  // Get recommended pricing model
+  app.post("/api/cost-customizations/recommendations/pricing-model", isAuthenticated, (req, res) => {
+    try {
+      const { environmentType, expectedRuntime } = req.body;
+
+      if (!environmentType || !expectedRuntime) {
+        return res.status(400).json({
+          success: false,
+          message: "Environment type and expected runtime are required"
+        });
+      }
+
+      const recommendation = costCustomizationService.getRecommendedPricingModel(environmentType, expectedRuntime);
+      res.json({ success: true, recommendation });
+    } catch (error) {
+      console.error("Get pricing model recommendation error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to get pricing model recommendation"
       });
     }
   });
@@ -1302,8 +1523,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         };
 
-        const costResults = costCalculator.calculateCosts(fullRequirements);
-        
+        const costResults = await costCalculator.calculateCosts(fullRequirements);
+
         console.log('Creating cost analysis in database...');
         costAnalysis = await storage.createCostAnalysis({
           requirements: fullRequirements,
@@ -1710,17 +1931,177 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const requirements = await excelToIaCService.parseExcelFile(req.file.buffer);
       console.log(`📊 Parsed ${requirements.length} infrastructure requirements`);
 
-      // Generate multi-cloud cost estimates
-      const multiCloudCosts = excelToIaCService.generateMultiCloudCostEstimate(requirements);
+      // Convert Excel requirements to InfrastructureRequirements format for the cost calculator
+      const totalVcpu = requirements.reduce((sum, req) => {
+        // Map CPU names to vCPU count
+        const cpuMap: Record<string, number> = {
+          '1 vCPU': 1, '2 vCPU': 2, '4 vCPU': 4, '8 vCPU': 8, '16 vCPU': 16,
+          '1': 1, '2': 2, '4': 4, '8': 8, '16': 16
+        };
+        return sum + (cpuMap[req.cpuName] || 2);
+      }, 0);
 
-      // Keep AWS costs for backward compatibility
+      const totalRam = requirements.reduce((sum, req) => sum + (req.ramGB || 4), 0);
+      const totalStorage = requirements.reduce((sum, req) => sum + (req.dataSpaceGB || 50), 0);
+      const dbCount = requirements.filter(req => req.workloadType.toLowerCase().includes('db')).length;
+
+      const infrastructureRequirements = {
+        currency: 'USD',
+        licensing: {
+          windows: { enabled: false, licenses: 0 },
+          sqlServer: { enabled: false, edition: 'standard' as const, licenses: 0 },
+          oracle: { enabled: dbCount > 0, edition: 'standard' as const, licenses: dbCount },
+          vmware: { enabled: false, licenses: 0 },
+          redhat: { enabled: false, licenses: 0 },
+          sap: { enabled: false, licenses: 0 },
+          microsoftOffice365: { enabled: false, licenses: 0 }
+        },
+        compute: [{
+          instances: 1, // Default to 1 instance for Excel uploads
+          vcpus: totalVcpu || 2,
+          ram: totalRam || 8,
+          instanceType: 'general-purpose' as const,
+          region: 'ap-south-1',
+          operatingSystem: 'linux' as const,
+          bootVolume: {
+            size: 30,
+            type: 'ssd-gp3' as const,
+            iops: 3000
+          }
+        }],
+        storage: {
+          blockStorage: totalStorage,
+          objectStorage: 0,
+          fileStorage: { size: 0, performanceMode: 'general-purpose' as const }
+        },
+        database: {
+          relational: {
+            engine: dbCount > 0 ? 'oracle' as const : 'mysql' as const,
+            instanceClass: 'small' as const,
+            storage: dbCount * 100,
+            multiAZ: false
+          },
+          nosql: { engine: 'none' as const, readCapacity: 0, writeCapacity: 0, storage: 0 },
+          cache: { engine: 'none' as const, instanceClass: 'small' as const, nodes: 0 },
+          dataWarehouse: { nodes: 0, nodeType: 'small' as const, storage: 0 }
+        },
+        networking: {
+          dataTransferOut: 100,
+          loadBalancers: requirements.filter(req => req.loadBalanced?.toLowerCase() === 'yes').length,
+          cdn: { enabled: false, requests: 0, dataTransfer: 0 },
+          dns: { hostedZones: 1, queries: 1000000 },
+          vpn: { connections: 0, hours: 0 }
+        },
+        analytics: {
+          dataProcessing: { hours: 0, nodeType: 'small' as const },
+          streaming: { shards: 0, records: 0 },
+          businessIntelligence: { users: 0, queries: 0 }
+        },
+        ai: {
+          training: { hours: 0, instanceType: 'cpu' as const },
+          inference: { requests: 0, instanceType: 'cpu' as const },
+          prebuilt: { imageAnalysis: 0, textProcessing: 0, speechServices: 0 }
+        },
+        security: {
+          webFirewall: { enabled: false, requests: 0 },
+          identityManagement: { users: 10, authentications: 10000 },
+          keyManagement: { keys: 5, operations: 10000 },
+          threatDetection: { enabled: true, events: 10000 }
+        },
+        monitoring: {
+          metrics: requirements.length * 10,
+          logs: 10,
+          traces: 0,
+          alerts: requirements.length
+        },
+        devops: {
+          cicd: { buildMinutes: 0, parallelJobs: 0 },
+          containerRegistry: { storage: 0, pulls: 0 },
+          apiManagement: { requests: 0, users: 0 }
+        },
+        backup: {
+          storage: totalStorage * 0.5,
+          frequency: 'daily' as const,
+          retention: 30
+        },
+        iot: { devices: 0, messages: 0, dataProcessing: 0, edgeLocations: 0 },
+        media: {
+          videoStreaming: { hours: 0, quality: '1080p' as const },
+          transcoding: { minutes: 0, inputFormat: 'standard' as const }
+        },
+        quantum: { processingUnits: 0, quantumAlgorithms: 'optimization' as const, circuitComplexity: 'basic' as const },
+        advancedAI: {
+          vectorDatabase: { dimensions: 0, queries: 0 },
+          customChips: { tpuHours: 0, inferenceChips: 0 },
+          modelHosting: { models: 0, requests: 0 },
+          ragPipelines: { documents: 0, embeddings: 0 }
+        },
+        edge: {
+          edgeLocations: 0,
+          edgeCompute: 0,
+          fiveGNetworking: { networkSlices: 0, privateNetworks: 0 }
+        },
+        confidential: {
+          secureEnclaves: 0,
+          trustedExecution: 0,
+          privacyPreservingAnalytics: 0,
+          zeroTrustProcessing: 0
+        },
+        optimization: {
+          reservedInstanceStrategy: 'moderate' as const,
+          spotInstanceTolerance: 10,
+          autoScalingAggression: 'moderate' as const,
+          costAlerts: { enabled: true, thresholdPercent: 20, notificationPreference: 'email' as const }
+        },
+        sustainability: {
+          carbonFootprintTracking: true,
+          renewableEnergyPreference: true,
+          greenCloudOptimization: true,
+          carbonOffsetCredits: 0
+        },
+        scenarios: {
+          disasterRecovery: { enabled: false, rtoHours: 24, rpoMinutes: 240, backupRegions: 1 },
+          compliance: { frameworks: [], auditLogging: false, dataResidency: 'global' as const },
+          migration: { dataToMigrate: totalStorage, applicationComplexity: 'moderate' as const }
+        }
+      };
+
+      // Generate basic cost estimates (quick calculation, no API calls)
       const costEstimates = excelToIaCService.generateCostEstimate(requirements);
 
-      // Store in session for later use
+      // Create placeholder multiCloudCosts (will be calculated later via separate API)
+      const multiCloudCosts = {
+        aws: {
+          estimates: costEstimates,
+          totalMonthly: 0,
+          totalYearly: 0
+        },
+        azure: {
+          estimates: costEstimates,
+          totalMonthly: 0,
+          totalYearly: 0
+        },
+        gcp: {
+          estimates: costEstimates,
+          totalMonthly: 0,
+          totalYearly: 0
+        },
+        oci: {
+          estimates: costEstimates,
+          totalMonthly: 0,
+          totalYearly: 0
+        }
+      };
+
+      const totalMonthlyCost = 0;
+      const totalYearlyCost = 0;
+
+      // Store in session for later cost calculation
       const sessionData = {
         requirements,
         costEstimates,
         multiCloudCosts,
+        infrastructureRequirements, // Store for API-based cost calculation
         uploadedAt: new Date().toISOString(),
         fileName: req.file.originalname
       };
@@ -1783,18 +2164,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`✅ Excel-to-IaC inventory scan saved with ID: ${inventoryScan.id}`);
 
+      // Return inventory immediately - cost calculation will be done separately
       res.json({
         success: true,
-        message: "Excel file processed successfully",
+        message: "Excel file processed successfully - inventory created",
         scanId: inventoryScan.id,
         summary: {
           totalResources: requirements.length,
-          totalMonthlyCost: costEstimates.reduce((sum, est) => sum + est.monthlyEstimate, 0),
-          totalYearlyCost: costEstimates.reduce((sum, est) => sum + est.yearlyEstimate, 0)
+          totalMonthlyCost: 0, // Will be calculated in separate step
+          totalYearlyCost: 0
         },
-        requirements: requirements.slice(0, 5), // Preview first 5
-        costEstimates: costEstimates.slice(0, 5), // Preview first 5
-        multiCloudCosts // Include full multi-cloud costs
+        requirements: requirements.slice(0, 10), // Preview first 10
+        costEstimates: costEstimates.slice(0, 10), // Preview first 10
+        multiCloudCosts // Placeholder costs
       });
 
     } catch (error) {
@@ -1802,6 +2184,145 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(400).json({
         success: false,
         message: error instanceof Error ? error.message : "Failed to process Excel file"
+      });
+    }
+  });
+
+  // Calculate costs for uploaded Excel file (separate from upload for better UX)
+  app.post("/api/excel-to-iac/calculate-costs", isAuthenticated, async (req: any, res) => {
+    try {
+      const { scanId } = req.body;
+      const userId = req.user.id;
+
+      if (!scanId) {
+        return res.status(400).json({ success: false, message: "Scan ID is required" });
+      }
+
+      // Get infrastructure requirements from session
+      const iacData = req.session.iacData;
+      if (!iacData || !iacData.infrastructureRequirements) {
+        return res.status(400).json({
+          success: false,
+          message: "No infrastructure data found. Please upload the Excel file again."
+        });
+      }
+
+      console.log('💰 Calculating costs with live API pricing...');
+      const costResults = await costCalculator.calculateCosts(iacData.infrastructureRequirements);
+      console.log('✅ Cost calculation complete');
+
+      // Convert calculator results to multiCloudCosts format
+      const multiCloudCosts = {
+        aws: {
+          estimates: iacData.costEstimates,
+          totalMonthly: costResults.providers.find(p => p.name === 'AWS')?.total || 0,
+          totalYearly: (costResults.providers.find(p => p.name === 'AWS')?.total || 0) * 12
+        },
+        azure: {
+          estimates: iacData.costEstimates,
+          totalMonthly: costResults.providers.find(p => p.name === 'AZURE')?.total || 0,
+          totalYearly: (costResults.providers.find(p => p.name === 'AZURE')?.total || 0) * 12
+        },
+        gcp: {
+          estimates: iacData.costEstimates,
+          totalMonthly: costResults.providers.find(p => p.name === 'GCP')?.total || 0,
+          totalYearly: (costResults.providers.find(p => p.name === 'GCP')?.total || 0) * 12
+        },
+        oci: {
+          estimates: iacData.costEstimates,
+          totalMonthly: costResults.providers.find(p => p.name === 'ORACLE')?.total || 0,
+          totalYearly: (costResults.providers.find(p => p.name === 'ORACLE')?.total || 0) * 12
+        }
+      };
+
+      // Calculate total costs (using minimum across providers as recommended)
+      const providerCosts = [
+        multiCloudCosts.aws.totalMonthly,
+        multiCloudCosts.azure.totalMonthly,
+        multiCloudCosts.gcp.totalMonthly,
+        multiCloudCosts.oci.totalMonthly
+      ].filter(cost => cost > 0);
+
+      const totalMonthlyCost = providerCosts.length > 0 ? Math.min(...providerCosts) : 0;
+      const totalYearlyCost = totalMonthlyCost * 12;
+
+      // Update session with calculated costs
+      req.session.iacData.multiCloudCosts = multiCloudCosts;
+
+      // Convert costResults to the format expected by storage
+      const resultsForStorage = {
+        providers: {
+          aws: {
+            total: costResults.providers.find(p => p.name === 'AWS')?.total || 0,
+            breakdown: {
+              Compute: costResults.providers.find(p => p.name === 'AWS')?.compute || 0,
+              Storage: costResults.providers.find(p => p.name === 'AWS')?.storage || 0,
+              Database: costResults.providers.find(p => p.name === 'AWS')?.database || 0,
+              Networking: costResults.providers.find(p => p.name === 'AWS')?.networking || 0,
+              Licensing: costResults.providers.find(p => p.name === 'AWS')?.licensing || 0
+            }
+          },
+          azure: {
+            total: costResults.providers.find(p => p.name === 'AZURE')?.total || 0,
+            breakdown: {
+              Compute: costResults.providers.find(p => p.name === 'AZURE')?.compute || 0,
+              Storage: costResults.providers.find(p => p.name === 'AZURE')?.storage || 0,
+              Database: costResults.providers.find(p => p.name === 'AZURE')?.database || 0,
+              Networking: costResults.providers.find(p => p.name === 'AZURE')?.networking || 0,
+              Licensing: costResults.providers.find(p => p.name === 'AZURE')?.licensing || 0
+            }
+          },
+          gcp: {
+            total: costResults.providers.find(p => p.name === 'GCP')?.total || 0,
+            breakdown: {
+              Compute: costResults.providers.find(p => p.name === 'GCP')?.compute || 0,
+              Storage: costResults.providers.find(p => p.name === 'GCP')?.storage || 0,
+              Database: costResults.providers.find(p => p.name === 'GCP')?.database || 0,
+              Networking: costResults.providers.find(p => p.name === 'GCP')?.networking || 0,
+              Licensing: costResults.providers.find(p => p.name === 'GCP')?.licensing || 0
+            }
+          },
+          oracle: {
+            total: costResults.providers.find(p => p.name === 'ORACLE')?.total || 0,
+            breakdown: {
+              Compute: costResults.providers.find(p => p.name === 'ORACLE')?.compute || 0,
+              Storage: costResults.providers.find(p => p.name === 'ORACLE')?.storage || 0,
+              Database: costResults.providers.find(p => p.name === 'ORACLE')?.database || 0,
+              Networking: costResults.providers.find(p => p.name === 'ORACLE')?.networking || 0,
+              Licensing: costResults.providers.find(p => p.name === 'ORACLE')?.licensing || 0
+            }
+          }
+        },
+        services: ['Compute', 'Storage', 'Networking', 'Database', 'Licensing', 'Security', 'Monitoring', 'Backup']
+      };
+
+      // Save cost analysis to database
+      console.log('💾 Saving cost analysis to database...');
+      const costAnalysis = await storage.createCostAnalysis({
+        requirements: iacData.infrastructureRequirements,
+        results: resultsForStorage,
+        inventoryScanId: scanId
+      }, userId);
+
+      console.log(`✅ Cost analysis created with ID: ${costAnalysis.id}`);
+
+      res.json({
+        success: true,
+        message: "Cost calculation completed successfully",
+        analysisId: costAnalysis.id,
+        summary: {
+          totalMonthlyCost,
+          totalYearlyCost
+        },
+        multiCloudCosts,
+        costResults: resultsForStorage
+      });
+
+    } catch (error) {
+      console.error("Cost calculation error:", error);
+      res.status(400).json({
+        success: false,
+        message: error instanceof Error ? error.message : "Failed to calculate costs"
       });
     }
   });

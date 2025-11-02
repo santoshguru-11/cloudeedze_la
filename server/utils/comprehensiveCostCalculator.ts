@@ -22,8 +22,18 @@ export class ComprehensiveCostCalculator {
     const providers = ['aws', 'azure', 'gcp', 'oracle'] as const;
     const results: CloudProvider[] = [];
 
-    // Calculate region multiplier
-    const regionMultiplier = this.pricing.regions[requirements.compute.region as keyof typeof this.pricing.regions]?.multiplier || 1.0;
+    // BACKWARD COMPATIBILITY: Convert old format (compute as object) to new format (compute as array)
+    if (!Array.isArray(requirements.compute)) {
+      console.log('⚠️ Converting old compute format (object) to new format (array)');
+      requirements = {
+        ...requirements,
+        compute: [requirements.compute as any]
+      };
+    }
+
+    // Calculate region multiplier (use first compute config's region)
+    const primaryRegion = requirements.compute[0]?.region || 'us-east-1';
+    const regionMultiplier = this.pricing.regions[primaryRegion as keyof typeof this.pricing.regions]?.multiplier || 1.0;
     
     // Calculate licensing costs (provider-independent)
     const licensingCosts = this.calculateLicensing(requirements);
@@ -124,55 +134,61 @@ export class ComprehensiveCostCalculator {
 
   private calculateCompute(provider: string, req: InfrastructureRequirements, regionMultiplier: number): number {
     const pricing = this.pricing.compute[provider as keyof typeof this.pricing.compute];
-    const instancePricing = pricing[req.compute.instanceType];
-    
-    // Base compute cost
-    const vcpuCost = req.compute.vcpus * instancePricing.vcpu * 24 * 30;
-    const ramCost = req.compute.ram * instancePricing.ram * 24 * 30;
-    let baseCost = vcpuCost + ramCost;
+    let totalComputeCost = 0;
 
-    // Windows multiplier
-    if (req.compute.operatingSystem === 'windows') {
-      baseCost *= pricing.windows_multiplier;
-    }
+    // Loop through all compute configurations
+    for (const computeConfig of req.compute) {
+      const instancePricing = pricing[computeConfig.instanceType];
 
-    // Boot volume cost
-    let bootVolumeCost = 0;
-    if (req.compute.bootVolume) {
-      const storagePricing = this.pricing.storage[provider as keyof typeof this.pricing.storage];
-      let volumePrice = 0;
-      
-      // Map boot volume types to storage pricing keys
-      const storageTypeMap: Record<string, string> = {
-        'ssd-gp3': 'ssd-gp3',
-        'ssd-gp2': 'ssd-gp3', // Map gp2 to gp3 pricing
-        'ssd-io2': 'ssd-io2',
-        'hdd-standard': 'hdd-st1'
-      };
-      
-      const storageType = storageTypeMap[req.compute.bootVolume.type] || 'ssd-gp3';
-      volumePrice = storagePricing.block[storageType as keyof typeof storagePricing.block] || 0.08;
-      
-      bootVolumeCost = req.compute.bootVolume.size * volumePrice;
-      
-      // Add IOPS cost for io2 volumes
-      if (req.compute.bootVolume.type === 'ssd-io2' && req.compute.bootVolume.iops > 3000) {
-        const extraIops = req.compute.bootVolume.iops - 3000;
-        const iopsCost = storagePricing.block.iops || 0.005;
-        bootVolumeCost += extraIops * iopsCost;
+      // Get number of instances (default to 1 for backward compatibility)
+      const instances = computeConfig.instances || 1;
+
+      // Base compute cost (WITHOUT OS multiplier - OS licensing is calculated separately)
+      const vcpuCost = computeConfig.vcpus * instancePricing.vcpu * 24 * 30;
+      const ramCost = computeConfig.ram * instancePricing.ram * 24 * 30;
+      const baseCost = vcpuCost + ramCost;
+
+      // Boot volume cost
+      let bootVolumeCost = 0;
+      if (computeConfig.bootVolume) {
+        const storagePricing = this.pricing.storage[provider as keyof typeof this.pricing.storage];
+        let volumePrice = 0;
+
+        // Map boot volume types to storage pricing keys
+        const storageTypeMap: Record<string, string> = {
+          'ssd-gp3': 'ssd-gp3',
+          'ssd-gp2': 'ssd-gp3', // Map gp2 to gp3 pricing
+          'ssd-io2': 'ssd-io2',
+          'hdd-standard': 'hdd-st1'
+        };
+
+        const storageType = storageTypeMap[computeConfig.bootVolume.type] || 'ssd-gp3';
+        volumePrice = storagePricing.block[storageType as keyof typeof storagePricing.block] || 0.08;
+
+        bootVolumeCost = computeConfig.bootVolume.size * volumePrice;
+
+        // Add IOPS cost for io2 volumes
+        if (computeConfig.bootVolume.type === 'ssd-io2' && computeConfig.bootVolume.iops > 3000) {
+          const extraIops = computeConfig.bootVolume.iops - 3000;
+          const iopsCost = storagePricing.block.iops || 0.005;
+          bootVolumeCost += extraIops * iopsCost;
+        }
       }
+
+      // Serverless functions
+      let serverlessCost = 0;
+      if (computeConfig.serverless) {
+        const pricingAny = pricing as any;
+        const requestCost = computeConfig.serverless.functions * (pricingAny.lambda_per_request || pricingAny.functions_per_request || pricingAny.cloud_functions_per_request || 0.0000002);
+        const executionCost = computeConfig.serverless.functions * computeConfig.serverless.executionTime * (pricingAny.lambda_per_gb_second || pricingAny.functions_per_gb_second || 0.0000166667);
+        serverlessCost = requestCost + executionCost;
+      }
+
+      // Add this compute config's cost (multiplied by instances and region multiplier)
+      totalComputeCost += (baseCost + bootVolumeCost + serverlessCost) * instances * regionMultiplier;
     }
 
-    // Serverless functions
-    let serverlessCost = 0;
-    if (req.compute.serverless) {
-      const pricingAny = pricing as any;
-      const requestCost = req.compute.serverless.functions * (pricingAny.lambda_per_request || pricingAny.functions_per_request || pricingAny.cloud_functions_per_request || 0.0000002);
-      const executionCost = req.compute.serverless.functions * req.compute.serverless.executionTime * (pricingAny.lambda_per_gb_second || pricingAny.functions_per_gb_second || 0.0000166667);
-      serverlessCost = requestCost + executionCost;
-    }
-
-    return (baseCost + bootVolumeCost + serverlessCost) * regionMultiplier;
+    return totalComputeCost;
   }
 
   private calculateStorage(provider: string, req: InfrastructureRequirements): number {
@@ -658,13 +674,17 @@ export class ComprehensiveCostCalculator {
   private calculateLicensing(requirements: InfrastructureRequirements): number {
     let totalLicensingCost = 0;
     const licensing = this.pricing.licensing;
-    const vcpus = requirements.compute.vcpus;
+
+    // Calculate total vCPUs across all compute configurations
+    const totalVcpus = requirements.compute.reduce((sum, config) => {
+      return sum + (config.vcpus * (config.instances || 1));
+    }, 0);
 
     // Windows Server Licensing
     if (requirements.licensing?.windows?.enabled) {
       const licenses = requirements.licensing.windows.licenses;
       const pricePerCore = licensing.windows.server_standard;
-      totalLicensingCost += licenses * pricePerCore * vcpus; // Per core licensing
+      totalLicensingCost += licenses * pricePerCore * totalVcpus; // Per core licensing
     }
 
     // SQL Server Licensing
@@ -672,7 +692,7 @@ export class ComprehensiveCostCalculator {
       const licenses = requirements.licensing.sqlServer.licenses;
       const edition = requirements.licensing.sqlServer.edition;
       const pricePerCore = licensing.sqlServer[edition as keyof typeof licensing.sqlServer] as number;
-      totalLicensingCost += licenses * pricePerCore * vcpus; // Per core licensing
+      totalLicensingCost += licenses * pricePerCore * totalVcpus; // Per core licensing
     }
 
     // Oracle Database Licensing
@@ -680,14 +700,14 @@ export class ComprehensiveCostCalculator {
       const licenses = requirements.licensing.oracle.licenses;
       const edition = requirements.licensing.oracle.edition;
       const pricePerCore = licensing.oracle[edition as keyof typeof licensing.oracle] as number;
-      totalLicensingCost += (licenses * pricePerCore * vcpus) / 12; // Annual to monthly
+      totalLicensingCost += (licenses * pricePerCore * totalVcpus) / 12; // Annual to monthly
     }
 
     // VMware Licensing
     if (requirements.licensing?.vmware?.enabled) {
       const licenses = requirements.licensing.vmware.licenses;
       const pricePerCpu = licensing.vmware.vsphere_standard;
-      const cpuSockets = Math.ceil(vcpus / 8); // Assume 8 cores per socket
+      const cpuSockets = Math.ceil(totalVcpus / 8); // Assume 8 cores per socket
       totalLicensingCost += (licenses * pricePerCpu * cpuSockets) / 12; // Annual to monthly
     }
 
@@ -695,7 +715,7 @@ export class ComprehensiveCostCalculator {
     if (requirements.licensing?.redhat?.enabled) {
       const licenses = requirements.licensing.redhat.licenses;
       const pricePerSocket = licensing.redhat.enterprise_linux;
-      const cpuSockets = Math.ceil(vcpus / 8);
+      const cpuSockets = Math.ceil(totalVcpus / 8);
       totalLicensingCost += (licenses * pricePerSocket * cpuSockets) / 12; // Annual to monthly
     }
 

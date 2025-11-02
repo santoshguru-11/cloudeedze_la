@@ -1,4 +1,3 @@
-import CloudedzeLogo from "../assets/logos/cloudedze-logo.svg";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +17,7 @@ import {
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { useLocation } from "wouter";
+import CloudedzeLogo from '../assets/logos/cloudedze-logo.svg';
 
 export default function Landing() {
   const [, setLocation] = useLocation();
@@ -29,42 +29,42 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-white relative overflow-hidden">
       <Helmet>
-        <title>Cloudedze - Multi-Cloud Cost Calculator & Optimization Platform | Save 40% on Cloud Costs</title>
+        <title>DZlens - Multi-Cloud Cost Calculator & Optimization Platform | Save 40% on Cloud Costs</title>
         <meta name="description" content="Multi-cloud cost calculator for AWS, Azure, GCP, and Oracle Cloud. Upload Terraform files, scan resources, and get detailed cost breakdowns. Save up to 40% on cloud costs with AI-powered insights." />
         <meta name="keywords" content="multi-cloud cost calculator, cloud cost optimization, AWS cost analysis, Azure cost management, GCP cost optimization, Oracle Cloud costs, Terraform cost analysis, cloud cost calculator, infrastructure cost optimization, cloud savings" />
-        <meta name="author" content="Cloudedze" />
+        <meta name="author" content="DZlens" />
         <meta name="robots" content="index, follow" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        
+
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://app.cloudedze.ai/" />
-        <meta property="og:title" content="Cloudedze - Multi-Cloud Cost Calculator & Optimization Platform" />
+        <meta property="og:url" content="https://app.cloudeedze.ai/" />
+        <meta property="og:title" content="DZlens - Multi-Cloud Cost Calculator & Optimization Platform" />
         <meta property="og:description" content="Multi-cloud cost calculator for AWS, Azure, GCP, and Oracle Cloud. Save up to 40% on cloud costs with AI-powered insights." />
-        <meta property="og:image" content="https://app.cloudedze.ai/og-image.jpg" />
-        <meta property="og:site_name" content="Cloudedze" />
-        
+        <meta property="og:image" content="https://app.cloudeedze.ai/og-image.jpg" />
+        <meta property="og:site_name" content="DZlens" />
+
         {/* Twitter */}
         <meta property="twitter:card" content="summary_large_image" />
-        <meta property="twitter:url" content="https://app.cloudedze.ai/" />
-        <meta property="twitter:title" content="Cloudedze - Multi-Cloud Cost Calculator & Optimization Platform" />
+        <meta property="twitter:url" content="https://app.cloudeedze.ai/" />
+        <meta property="twitter:title" content="DZlens - Multi-Cloud Cost Calculator & Optimization Platform" />
         <meta property="twitter:description" content="Multi-cloud cost calculator for AWS, Azure, GCP, and Oracle Cloud. Save up to 40% on cloud costs with AI-powered insights." />
-        <meta property="twitter:image" content="https://app.cloudedze.ai/og-image.jpg" />
-        
+        <meta property="twitter:image" content="https://app.cloudeedze.ai/og-image.jpg" />
+
         {/* Additional SEO */}
-        <link rel="canonical" href="https://app.cloudedze.ai/" />
+        <link rel="canonical" href="https://app.cloudeedze.ai/" />
         <meta name="theme-color" content="#ffffff" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        
+
         {/* Structured Data */}
         <script type="application/ld+json">
           {JSON.stringify({
             "@context": "https://schema.org",
             "@type": "SoftwareApplication",
-            "name": "Cloudedze",
+            "name": "DZlens",
             "description": "Multi-cloud cost calculator for AWS, Azure, GCP, and Oracle Cloud",
-            "url": "https://app.cloudedze.ai/",
+            "url": "https://app.cloudeedze.ai/",
             "applicationCategory": "BusinessApplication",
             "operatingSystem": "Web",
             "offers": {

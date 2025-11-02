@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { Helmet } from 'react-helmet-async';
-import CloudedzeLogo from '../assets/logos/cloudedze-logo.svg';
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -77,16 +76,16 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <Helmet>
-        <title>Sign In - Cloudedze</title>
-        <meta name="description" content="Sign in to Cloudedze to access multi-cloud cost analysis and optimization tools." />
+        <title>Sign In - DZlens</title>
+        <meta name="description" content="Sign in to DZlens to access multi-cloud cost analysis and optimization tools." />
       </Helmet>
 
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <img src={CloudedzeLogo} alt="Cloudedze" className="h-12 w-auto" />
+            <img src="/DZlens.png" alt="DZlens" className="h-12 w-auto" />
           </div>
-          <CardTitle className="text-2xl">Welcome to Cloudedze</CardTitle>
+          <CardTitle className="text-2xl">Welcome to DZlens</CardTitle>
           <CardDescription>
             Sign in to access your multi-cloud cost analysis dashboard
           </CardDescription>

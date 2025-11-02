@@ -8,14 +8,17 @@ import type {
   InsertInventoryScan,
   InventoryScan,
   InsertScanReport,
-  ScanReport
+  ScanReport,
+  InsertCostCustomization,
+  CostCustomization
 } from "@shared/schema";
 import {
   users,
   costAnalyses,
   cloudCredentials,
   inventoryScans,
-  scanReports
+  scanReports,
+  costCustomizations
 } from "@shared/schema";
 import { db } from "./db.js";
 import { eq, and } from "drizzle-orm";
@@ -27,20 +30,20 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: UpsertUser): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
-  
+
   // Cost analysis operations
   createCostAnalysis(analysis: InsertCostAnalysis, userId?: string): Promise<CostAnalysis>;
   getCostAnalysis(id: string): Promise<CostAnalysis | undefined>;
   getAllCostAnalyses(userId?: string): Promise<CostAnalysis[]>;
   updateCostAnalysis(id: string, userId: string, updates: Partial<InsertCostAnalysis>): Promise<CostAnalysis | undefined>;
   deleteCostAnalysis(id: string, userId: string): Promise<boolean>;
-  
+
   // Cloud credentials operations
   createCloudCredential(credential: InsertCloudCredential, userId: string): Promise<CloudCredential>;
   getUserCloudCredentials(userId: string): Promise<CloudCredential[]>;
   updateCloudCredential(id: string, updates: Partial<InsertCloudCredential>): Promise<CloudCredential | undefined>;
   deleteCloudCredential(id: string): Promise<boolean>;
-  
+
   // Inventory scan operations
   createInventoryScan(scan: InsertInventoryScan, userId: string): Promise<InventoryScan>;
   getUserInventoryScans(userId: string): Promise<InventoryScan[]>;
@@ -53,6 +56,13 @@ export interface IStorage {
   getScanReport(id: string): Promise<ScanReport | undefined>;
   getAllScanReports(): Promise<ScanReport[]>;
   deleteScanReport(id: string): Promise<boolean>;
+
+  // Cost customization operations
+  createCostCustomization(customization: InsertCostCustomization, userId: string): Promise<CostCustomization>;
+  getUserCostCustomizations(userId: string): Promise<CostCustomization[]>;
+  getCostCustomization(id: string, userId: string): Promise<CostCustomization | undefined>;
+  updateCostCustomization(id: string, userId: string, updates: Partial<InsertCostCustomization>): Promise<CostCustomization | undefined>;
+  deleteCostCustomization(id: string, userId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -266,6 +276,47 @@ export class DatabaseStorage implements IStorage {
 
   async deleteScanReport(id: string): Promise<boolean> {
     const result = await db.delete(scanReports).where(eq(scanReports.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // Cost customization operations
+  async createCostCustomization(customization: InsertCostCustomization, userId: string): Promise<CostCustomization> {
+    const [newCustomization] = await db
+      .insert(costCustomizations)
+      .values({ ...customization, userId })
+      .returning();
+    return newCustomization;
+  }
+
+  async getUserCostCustomizations(userId: string): Promise<CostCustomization[]> {
+    return await db
+      .select()
+      .from(costCustomizations)
+      .where(eq(costCustomizations.userId, userId))
+      .orderBy(costCustomizations.createdAt);
+  }
+
+  async getCostCustomization(id: string, userId: string): Promise<CostCustomization | undefined> {
+    const [customization] = await db
+      .select()
+      .from(costCustomizations)
+      .where(and(eq(costCustomizations.id, id), eq(costCustomizations.userId, userId)));
+    return customization;
+  }
+
+  async updateCostCustomization(id: string, userId: string, updates: Partial<InsertCostCustomization>): Promise<CostCustomization | undefined> {
+    const [updatedCustomization] = await db
+      .update(costCustomizations)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(costCustomizations.id, id), eq(costCustomizations.userId, userId)))
+      .returning();
+    return updatedCustomization;
+  }
+
+  async deleteCostCustomization(id: string, userId: string): Promise<boolean> {
+    const result = await db
+      .delete(costCustomizations)
+      .where(and(eq(costCustomizations.id, id), eq(costCustomizations.userId, userId)));
     return result.rowCount !== null && result.rowCount > 0;
   }
 }

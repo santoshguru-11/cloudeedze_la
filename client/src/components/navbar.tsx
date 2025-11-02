@@ -1,8 +1,6 @@
 import { Link, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import CloudedzeLogo from '../assets/logos/cloudedze-logo.svg';
-import CloudedzeLogoWhite from '../assets/logos/cloudedze-logo-white.svg';
 
 export default function Navbar() {
   const [, setLocation] = useLocation();
@@ -20,9 +18,9 @@ export default function Navbar() {
           {/* Logo */}
           <div className="flex-shrink-0">
             <Link href="/calculator" className="flex items-center">
-              <img 
-                src={CloudedzeLogo} 
-                alt="Cloudedze" 
+              <img
+                src="/dZlens.png"
+                alt="DZlens"
                 className="h-8 w-auto"
               />
             </Link>
