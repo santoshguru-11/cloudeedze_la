@@ -238,8 +238,6 @@ export function registerAdminRoutes(app: Express) {
         status: 'generated'
       }, scan.userId);
 
-      console.log('Generated report object:', report);
-
       res.json({
         success: true,
         report: {
