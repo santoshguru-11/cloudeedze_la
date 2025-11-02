@@ -322,7 +322,7 @@ export default function UserReports() {
                             {formatDate(scan.createdAt)}
                           </TableCell>
                           <TableCell>
-                            {scan.status === 'completed' && !hasReport(.id) && (
+                            {scan.status === 'completed' && !hasReport(scan.id) && (
                               <Button
                                 size="sm"
                                 onClick={() => handleGenerateReport(scan.id)}
