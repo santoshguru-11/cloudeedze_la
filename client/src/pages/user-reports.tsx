@@ -59,12 +59,12 @@ export default function UserReports() {
 
   // Generate report mutation
   const generateReportMutation = useMutation({
-    mutationFn: async (scanId: string) => {
+    mutationFn: async ({ scanId, reportName }: { scanId: string, reportName: string }) => {
       const res = await fetch(`${API_BASE_URL}/api/reports/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ scanId })
+        body: JSON.stringify({ scanId, reportName })
       });
       if (!res.ok) {
         const error = await res.json();
@@ -156,15 +156,18 @@ export default function UserReports() {
   };
 
   const handleGenerateReport = async (scanId: string) => {
-    setGeneratingReports(prev => new Set(prev).add(scanId));
-    try {
-      await generateReportMutation.mutateAsync(scanId);
-    } finally {
-      setGeneratingReports(prev => {
-        const next = new Set(prev);
-        next.delete(scanId);
-        return next;
-      });
+    const reportName = prompt("Enter a name for the report:");
+    if (reportName) {
+      setGeneratingReports(prev => new Set(prev).add(scanId));
+      try {
+        await generateReportMutation.mutateAsync({ scanId, reportName });
+      } finally {
+        setGeneratingReports(prev => {
+          const next = new Set(prev);
+          next.delete(scanId);
+          return next;
+        });
+      }
     }
   };
 
