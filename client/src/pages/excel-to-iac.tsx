@@ -622,7 +622,7 @@ export default function ExcelToIaC() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <Helmet>
-        <title>Excel to Infrastructure as Code - Cloudedze</title>
+        <title>Excel to Infrastructure as Code - DZlens</title>
         <meta name="description" content="Convert Excel infrastructure requirements to Terraform code and get cost estimates" />
       </Helmet>
 

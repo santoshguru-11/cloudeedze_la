@@ -57,7 +57,7 @@ export default function Results() {
   return (
     <div className="bg-slate-50 min-h-screen">
       <Helmet>
-        <title>Cost Analysis Results - Cloudedze</title>
+        <title>Cost Analysis Results - DZlens</title>
         <meta name="description" content="View detailed cost comparison results across all major cloud providers with optimization recommendations." />
       </Helmet>
       <CostResults results={analysis.results as any} analysisId={analysisId!} />

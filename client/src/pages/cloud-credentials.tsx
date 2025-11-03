@@ -260,7 +260,7 @@ export default function CloudCredentials() {
   return (
     <div className="container mx-auto px-4 py-8">
       <Helmet>
-        <title>Cloud Credentials - Cloudedze</title>
+        <title>Cloud Credentials - DZlens</title>
         <meta name="description" content="Manage your cloud provider credentials for AWS, Azure, GCP, and Oracle Cloud to enable live resource scanning and cost analysis." />
       </Helmet>
 

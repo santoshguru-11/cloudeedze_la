@@ -248,7 +248,7 @@ export default function ExcelUpload() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <Helmet>
-        <title>File Upload - Cloudedze</title>
+        <title>File Upload - DZlens</title>
         <meta name="description" content="Upload files with cloud resource details for cost analysis and optimization." />
       </Helmet>
 
@@ -256,7 +256,7 @@ export default function ExcelUpload() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <img src={CloudedzeLogo} alt="Cloudedze" className="h-12 w-auto" />
+            <img src={CloudedzeLogo} alt="DZlens" className="h-12 w-auto" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Excel Upload & Analysis</h1>
           <p className="text-gray-600">

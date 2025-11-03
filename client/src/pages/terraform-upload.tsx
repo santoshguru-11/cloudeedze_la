@@ -258,7 +258,7 @@ export default function TerraformUpload() {
   return (
     <div className="container mx-auto px-4 py-8">
       <Helmet>
-        <title>Terraform State Upload - Cloudedze</title>
+        <title>Terraform State Upload - DZlens</title>
         <meta name="description" content="Upload your Terraform state files to automatically analyze your infrastructure and calculate cloud costs." />
       </Helmet>
 

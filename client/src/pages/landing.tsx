@@ -110,7 +110,7 @@ export default function Landing() {
                   size="lg" 
                   className="text-lg px-8 py-6 bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-lg hover:shadow-blue-500/25 transition-all duration-300 transform hover:scale-105"
                   data-testid="button-login"
-                  aria-label="Get started with Cloudedze free trial"
+                  aria-label="Get started with DZlens free trial"
                 >
                   Get Started Free
                   <ArrowRightIcon className="ml-2 w-5 h-5" aria-hidden="true" />
@@ -119,7 +119,7 @@ export default function Landing() {
                   variant="outline" 
                   size="lg" 
                   className="text-lg px-8 py-6 border-gray-300 text-gray-700 hover:bg-gray-50"
-                  aria-label="Watch Cloudedze demo video"
+                  aria-label="Watch DZlens demo video"
                 >
                   Watch Demo
                 </Button>
@@ -230,7 +230,7 @@ export default function Landing() {
               <h2 id="benefits-heading" className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
                 Why Choose
                 <span className="block text-blue-600">
-                  Cloudedze?
+                  DZlens?
                 </span>
               </h2>
               <p className="text-xl text-gray-600 max-w-3xl mx-auto">
