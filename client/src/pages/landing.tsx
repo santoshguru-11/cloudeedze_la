@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { useLocation } from "wouter";
-import CloudedzeLogo from '../assets/logos/cloudedze-logo.svg';
 
 export default function Landing() {
   const [, setLocation] = useLocation();
@@ -359,9 +358,9 @@ export default function Landing() {
           <div className="container mx-auto px-4 text-center">
             <div className="max-w-4xl mx-auto">
               <div className="flex justify-center mb-8">
-                <img 
-                  src={CloudedzeLogo} 
-                  alt="DZlens Logo - Multi-Cloud Cost Calculator Platform" 
+                <img
+                  src="/dZlens.png"
+                  alt="DZlens Logo - Multi-Cloud Cost Calculator Platform"
                   className="h-16 w-auto"
                   width="64"
                   height="64"

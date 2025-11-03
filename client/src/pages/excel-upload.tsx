@@ -9,7 +9,6 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Download, Upload, FileSpreadsheet, CheckCircle, AlertCircle, X, Zap, FileText } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
-import CloudedzeLogo from '../assets/logos/cloudedze-logo.svg';
 import CostResults from '@/components/cost-results';
 
 interface ValidationResult {
@@ -256,7 +255,7 @@ export default function ExcelUpload() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <img src={CloudedzeLogo} alt="DZlens" className="h-12 w-auto" />
+            <img src="/dZlens.png" alt="DZlens" className="h-12 w-auto" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Excel Upload & Analysis</h1>
           <p className="text-gray-600">
