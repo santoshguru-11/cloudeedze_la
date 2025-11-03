@@ -656,7 +656,7 @@ export default function Landing() {
               <div className="flex justify-center mb-8">
                 <img 
                   src={CloudedzeLogo} 
-                  alt="Cloudedze Logo - Multi-Cloud Cost Calculator Platform" 
+                  alt="DZlens Logo - Multi-Cloud Cost Calculator Platform" 
                   className="h-16 w-auto"
                   width="64"
                   height="64"
@@ -680,7 +680,7 @@ export default function Landing() {
                   size="lg" 
                   className="text-xl px-12 py-8 bg-blue-600 text-white hover:bg-blue-700 border-0 shadow-lg hover:shadow-blue-500/25 transition-all duration-300 transform hover:scale-105"
                   data-testid="button-login-cta"
-                  aria-label="Start your free trial with Cloudedze"
+                  aria-label="Start your free trial with DZlens"
                 >
                   Start Free Trial
                   <ArrowRightIcon className="ml-3 w-6 h-6" aria-hidden="true" />
@@ -689,7 +689,7 @@ export default function Landing() {
                   variant="outline" 
                   size="lg" 
                   className="text-xl px-12 py-8 border-gray-300 text-gray-700 hover:bg-gray-50"
-                  aria-label="Schedule a demo with Cloudedze"
+                  aria-label="Schedule a demo with DZlens"
                 >
                   Schedule Demo
                 </Button>
@@ -783,7 +783,7 @@ export default function Landing() {
               <div className="flex justify-center mb-8">
                 <img 
                   src={CloudedzeLogo} 
-                  alt="Cloudedze Logo - Multi-Cloud Cost Calculator Platform" 
+                  alt="DZlens Logo - Multi-Cloud Cost Calculator Platform" 
                   className="h-16 w-auto"
                   width="64"
                   height="64"
@@ -807,7 +807,7 @@ export default function Landing() {
                   size="lg" 
                   className="text-xl px-12 py-8 bg-blue-600 text-white hover:bg-blue-700 border-0 shadow-lg hover:shadow-blue-500/25 transition-all duration-300 transform hover:scale-105"
                   data-testid="button-login-cta"
-                  aria-label="Start your free trial with Cloudedze"
+                  aria-label="Start your free trial with DZlens"
                 >
                   Start Free Trial
                   <ArrowRightIcon className="ml-3 w-6 h-6" aria-hidden="true" />
@@ -816,7 +816,7 @@ export default function Landing() {
                   variant="outline" 
                   size="lg" 
                   className="text-xl px-12 py-8 border-gray-300 text-gray-700 hover:bg-gray-50"
-                  aria-label="Schedule a demo with Cloudedze"
+                  aria-label="Schedule a demo with DZlens"
                 >
                   Schedule Demo
                 </Button>
